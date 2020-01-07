@@ -1,0 +1,12 @@
+[submodule "PEUtils"]
+	path = PEUtils
+	url = git@github.com:littlepush/PEUtils.git
+[submodule "PECoTask"]
+	path = PECoTask
+	url = git@github.com:littlepush/PECoTask.git
+[submodule "PECoNet"]
+	path = PECoNet
+	url = git@github.com:littlepush/PECoNet.git
+[submodule "PECoRLog"]
+	path = PECoRLog
+	url = git@github.com:littlepush/PECoRLog.git
