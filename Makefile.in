@@ -455,6 +455,7 @@ pecoSub_HEADERS = \
 
 peutilsSub_HEADERS = \
 	PEUtils/peco/utils/dependency.hpp \
+	PEUtils/peco/utils/lrucache.hpp \
 	PEUtils/peco/utils/filemgr.h \
 	PEUtils/peco/utils/gzip.h \
 	PEUtils/peco/utils/mustd.h \
