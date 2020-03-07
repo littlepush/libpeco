@@ -16709,14 +16709,14 @@ fi
 if test "x${prefix}" != "xNONE"; then :
 
     CPPFLAGS="-I${prefix}/include ${CPPFLAGS}"
-    LDFALGS="-L${prefix}/lib ${LDFALGS}"
+    LDFLAGS="-L${prefix}/lib ${LDFLAGS}"
 
 fi
 
 if test "x${libssl}" != "x"; then :
 
     CPPFLAGS="-I${libssl}/include ${CPPFLAGS}"
-    LDFLAGS="-L${libssl}/lib ${LDFALGS}"
+    LDFLAGS="-L${libssl}/lib ${LDFLAGS}"
 
 fi
 

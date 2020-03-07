@@ -24,12 +24,12 @@ AC_CONFIG_SRCDIR([PEUtils/peco/src/filemgr.cpp])
 
 AS_IF([test "x${prefix}" != "xNONE"], [
     CPPFLAGS="-I${prefix}/include ${CPPFLAGS}"
-    LDFALGS="-L${prefix}/lib ${LDFALGS}"
+    LDFLAGS="-L${prefix}/lib ${LDFLAGS}"
 ])
 
 AS_IF([test "x${libssl}" != "x"], [
     CPPFLAGS="-I${libssl}/include ${CPPFLAGS}"
-    LDFLAGS="-L${libssl}/lib ${LDFALGS}"
+    LDFLAGS="-L${libssl}/lib ${LDFLAGS}"
 ])
 
 CPPFLAGS="-I./PEUtils -I./PECoTask -I./PECoNet -I./PECoRLog ${CPPFLAGS}"
