@@ -93,3 +93,9 @@ peconetprotosSub_HEADERS = \
 	PECoNet/peco/conet/protos/http.h \
 	PECoNet/peco/conet/protos/socks5.h \
 	PECoNet/peco/conet/protos/redis.h
+
+# Build Test Case
+bin_PROGRAMS = cotask_test1
+cotask_test1_LDADD = libpeco.la
+cotask_test1_SOURCES = \
+	PECoTask/peco/src/task_test1.cpp

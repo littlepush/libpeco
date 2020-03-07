@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([libpeco], [1.0.0], [littlepush@gmail.com], [], [https://github.com/littlepush/libpeco])
+AC_INIT([libpeco], [2.0.0], [littlepush@gmail.com], [], [https://github.com/littlepush/libpeco])
 AC_CONFIG_AUX_DIR([build])
 AM_MAINTAINER_MODE([disable])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
