@@ -333,15 +333,10 @@ namespace pe {
             running_task_(NULL), task_count_(0), 
             running_(false), ret_code_(0) 
         { 
-            #ifndef FORCE_USE_UCONTEXT
-
             if ( __this_loop != NULL ) {
                 throw std::runtime_error("cannot create more than one loop in one thread");
             }
             __this_loop = this;
-
-            #endif
-
             nearest_timeout_ = task_time_now();
         }
         // Default D'str
