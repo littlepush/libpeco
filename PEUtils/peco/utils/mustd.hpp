@@ -61,7 +61,7 @@ SOFTWARE.
 #include <csignal>
 #include <stdexcept>
 
-#if defined(__GUNC__) || defined (__GLIBCPP__) || defined (__clang__)
+#if defined(__GLIBC__) || defined (__GLIBCPP__) || defined (__clang__)
 #define __LIBPECO_USE_GNU__
 #endif
 
