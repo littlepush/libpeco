@@ -348,10 +348,10 @@ namespace pe {
 
         // Internal task switcher
         void loop::__switch_task( task* ptask ) {
-            #ifndef FORCE_USE_UCONTEXT
-            auto _tstatus = ptask->status;
-            #endif
             full_task_t *_ptask = (full_task_t *)ptask;
+            #ifndef FORCE_USE_UCONTEXT
+            auto _tstatus = _ptask->status;
+            #endif
             if ( _ptask->status != task_status_stopped ) {
                 _ptask->status = task_status_running;
             }
