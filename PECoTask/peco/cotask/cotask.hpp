@@ -19,10 +19,10 @@
 #endif
 
 // For old libpeco version, forct to use ucontext
-#if defined(__LIBPECO_USE_GNU__) && LIBPECO_STANDARD_VERSION < 0x00020001
+#if defined(__LIBPECO_USE_GNU__) && (LIBPECO_STANDARD_VERSION < 0x00020001)
 #define FORCE_USE_UCONTEXT 1
 // When enabled ucontext and we are using gnu lib, can use ucontext
-#elif defined(__LIBPECO_USE_GNU__) && defined(ENABLE_UCONTEXT) && ENABLE_UCONTEXT == 1
+#elif defined(__LIBPECO_USE_GNU__) && defined(ENABLE_UCONTEXT) && (ENABLE_UCONTEXT == 1)
 #define FORCE_USE_UCONTEXT 1
 #endif
 
