@@ -9,15 +9,38 @@
 
 #include <peco/cotask/loop.h>
 #include <signal.h>
+
+// For old libpeco version, forct to use ucontext
+#if defined(__LIBPECO_USE_GNU__) && (LIBPECO_STANDARD_VERSION < 0x00020001)
+#define FORCE_USE_UCONTEXT 1
+// When enabled ucontext and we are using gnu lib, can use ucontext
+#elif defined(__LIBPECO_USE_GNU__) && defined(ENABLE_UCONTEXT) && (ENABLE_UCONTEXT == 1)
+#define FORCE_USE_UCONTEXT 1
+#endif
+
+#ifdef FORCE_USE_UCONTEXT
+#ifdef __APPLE__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
+#include <thread>
+#endif
+
+#ifdef FORCE_USE_UCONTEXT
+#ifdef __APPLE__
+#include <sys/ucontext.h>
+#endif
+#include <ucontext.h>
+#else
+#include <setjmp.h>
+#endif
+
+
 #ifdef __APPLE__
 #include <peco/cotask/kevent_wrapper.h>
 #else
 #include <peco/cotask/epoll_wrapper.h>
-#endif
-
-#ifdef __APPLE__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
 #include <peco/cotask/mempage.h>
@@ -28,15 +51,70 @@
 #include <execinfo.h>
 #endif
 
-#include <thread>
-
 extern "C" {
     int PECoTask_Autoconf() { return 0; }
 }
 namespace pe {
     namespace co {
+
+        struct full_task_t : public task {
+            // Is event id
+            bool                is_event_id;
+            // The stack for the job
+            stack_ptr           stack;
+            // The real running job's point
+            task_job_t*         pjob;
+
+            // Status of the task
+            task_status         status;
+            // Status of the last monitoring event
+            waiting_signals     signal;
+
+            // Flags for holding
+            int                 hold_sig[2];
+            long                related_fd;
+
+            // Next firing time of the task
+            // for a oneshot job, is the creatation time
+            task_time_t         next_time;
+            task_time_t         read_until;
+            task_time_t         write_until;
+            duration_t          duration;
+            // Repeat count of the task
+            repeat_t            repeat_count;
+
+            // Parent task
+            full_task_t*               p_task;
+            // Child task list head
+            full_task_t*               c_task;
+            // Task list
+            full_task_t*               prev_task;
+            full_task_t*               next_task;
+
+            // Tick
+            task_time_t         lt_time;
+
+            // On Task Destory
+            task_job_t*         exitjob;
+
+        #ifdef FORCE_USE_UCONTEXT
+            // Context for the job
+            ucontext_t          ctx;
+        #else
+            stack_t             task_stack;
+            jmp_buf             buf;
+        #endif
+        };
+
         // The thread local loop point
         thread_local loop * __this_loop = NULL;
+
+        #ifdef FORCE_USE_UCONTEXT
+        thread_local ucontext_t      __main_context;
+        #else
+        thread_local jmp_buf         __main_context;
+        #endif
+
         // The main loop
         thread_local loop this_loop;
 
@@ -50,6 +128,9 @@ namespace pe {
             }
         )
 
+        // Swap to main task
+        void __swap_to_main();
+
         // Dump Stack Info
         void __dump_call_stack( FILE* fd ) {
         #ifdef __LIBPECO_USE_GNU__
@@ -61,14 +142,14 @@ namespace pe {
 
         typedef void (*context_job_t)(void);
 		// Run job wrapper
-        #if FORCE_USE_UCONTEXT
+        #ifdef FORCE_USE_UCONTEXT
         inline void __job_run( task_job_t* job )
         #else
         inline void __job_run( int sig )
         #endif
         {
         #ifndef FORCE_USE_UCONTEXT
-            task* _ptask = __this_loop->get_running_task();
+            full_task_t* _ptask = (full_task_t *)__this_loop->get_running_task();
             auto job = _ptask->pjob;
             if ( !setjmp(_ptask->buf) ) return;
         #endif
@@ -108,16 +189,15 @@ namespace pe {
             }
             #ifndef FORCE_USE_UCONTEXT
             // Long Jump back to the main context
-            __this_loop->swap_to_main_loop();
+            __swap_to_main();
             #endif
         }
 
-        task* __create_task( task_job_t job ) {
+        full_task_t* __create_task( task_job_t job ) {
 
             // The task should be put on the heap
-            task * _ptask = (task *)malloc(sizeof(task));
+            full_task_t * _ptask = (full_task_t *)calloc(1, sizeof(full_task_t));
             _ptask->id = (intptr_t)(_ptask);
-            _ptask->exitjob = NULL;
 
             // Init the stack for the task
             // Get a 1MB Memory piece
@@ -133,12 +213,12 @@ namespace pe {
             #ifdef FORCE_USE_UCONTEXT
 
             // Init the context
-            getcontext(&_ptask->ctx);
+            getcontext(&(_ptask->ctx));
             _ptask->ctx.uc_stack.ss_sp = _ptask->stack;
             _ptask->ctx.uc_stack.ss_size = mu::mem::page::piece_size;
             _ptask->ctx.uc_stack.ss_flags = 0;
-            _ptask->ctx.uc_link = __this_loop->get_main_context();
-            makecontext(&_ptask->ctx, (context_job_t)&__job_run, 1, _ptask->pjob);
+            _ptask->ctx.uc_link = &__main_context;
+            makecontext(&(_ptask->ctx), (context_job_t)&__job_run, 1, _ptask->pjob);
 
             #else
 
@@ -160,7 +240,7 @@ namespace pe {
             _ptask->arg = NULL;
 
             // Set the parent task
-            _ptask->p_task = __this_loop->get_running_task();
+            _ptask->p_task = (full_task_t *)__this_loop->get_running_task();
             // I have no child task
             _ptask->c_task = NULL;
             // I have no newer sibling node
@@ -179,20 +259,35 @@ namespace pe {
             }
 
             memset(&_ptask->reserved_flags, 0, sizeof(_ptask->reserved_flags));
+            _ptask->exitjob = NULL;
 
             return _ptask;
         }
-
-        void __reset_task( task* ptask ) {
+        // Yield current task and switch to main loop
+        void __swap_to_main() {
+            full_task_t *_ptask = (full_task_t *)__this_loop->get_running_task();
+            ON_DEBUG_COTASK(
+                std::cout << "X " << _ptask->id << " => main" << std::endl;
+            )
+            #ifdef FORCE_USE_UCONTEXT
+            swapcontext(&(_ptask->ctx), &__main_context);
+            // setcontext(&main_ctx_);
+            #else
+            if ( !setjmp(_ptask->buf) ) {
+                longjmp(__main_context, 1);
+            }
+            #endif
+        }
+        void __reset_task( full_task_t* ptask ) {
         #if FORCE_USE_UCONTEXT
-            getcontext(&ptask->ctx);
+            getcontext(&(ptask->ctx));
             ptask->ctx.uc_stack.ss_sp = ptask->stack;
             ptask->ctx.uc_stack.ss_size = mu::mem::page::piece_size;
             ptask->ctx.uc_stack.ss_flags = 0;
-            ptask->ctx.uc_link = __this_loop->get_main_context();
+            ptask->ctx.uc_link = &__main_context;
 
             // Save the job on heap
-            makecontext(&ptask->ctx, (context_job_t)&__job_run, 1, ptask->pjob);
+            makecontext(&(ptask->ctx), (context_job_t)&__job_run, 1, ptask->pjob);
         #else
 
             // Reset the task stack to the beginning
@@ -203,14 +298,14 @@ namespace pe {
         #endif
         }
 
-        task* __create_task_with_fd( int fd, task_job_t job ) {
-            task * _ptask = __create_task( job );
+        full_task_t* __create_task_with_fd( int fd, task_job_t job ) {
+            full_task_t * _ptask = __create_task( job );
             _ptask->id = (intptr_t)fd;
             _ptask->is_event_id = true;
             return _ptask;
         }
 
-        void __destory_task( task * ptask ) {
+        void __destory_task( full_task_t * ptask ) {
             if ( ptask->exitjob ) {
                 (*ptask->exitjob)();
                 delete ptask->exitjob;
@@ -256,12 +351,16 @@ namespace pe {
             #ifndef FORCE_USE_UCONTEXT
             auto _tstatus = ptask->status;
             #endif
-            if ( ptask->status != task_status_stopped ) {
-                ptask->status = task_status_running;
+            full_task_t *_ptask = (full_task_t *)ptask;
+            if ( _ptask->status != task_status_stopped ) {
+                _ptask->status = task_status_running;
             }
 
             running_task_ = ptask;
 
+            ON_DEBUG_COTASK(
+                std::cout << CLI_BLUE << "X main => " << ptask->id << CLI_NOR << std::endl;
+            )
             #ifdef FORCE_USE_UCONTEXT
             // If the task finishs and quit, then will continue
             // the main loop because we set uc_link as the main ctx
@@ -269,10 +368,7 @@ namespace pe {
             // otherwise, the yield function will change the
             // next_time of the task and insert it back to
             // the task cache.
-            ON_DEBUG_COTASK(
-                std::cout << CLI_BLUE << "X main => " << ptask->id << CLI_NOR << std::endl;
-            )
-            swapcontext(&main_ctx_, &ptask->ctx);
+            swapcontext(&__main_context, &(_ptask->ctx));
             #else
 
             // Set to use the target task's stack to handler the signal, 
@@ -281,7 +377,7 @@ namespace pe {
             if ( _tstatus == task_status_pending ) {
                 // Raise the signal to switch to the stack
                 // And the handler will call setjmp and return immediately
-                sigaltstack(&ptask->task_stack, NULL);
+                sigaltstack(&(_ptask->task_stack), NULL);
 
                 // register the signal to run job
                 struct sigaction    sa;            
@@ -294,8 +390,8 @@ namespace pe {
             }
             // Save current main jmp's position and jump to the 
             // task stack
-            if ( !setjmp(main_jmp_) ) {
-                longjmp(ptask->buf, 1);
+            if ( !setjmp(__main_context) ) {
+                longjmp(_ptask->buf, 1);
             }
 
             #endif
@@ -305,22 +401,22 @@ namespace pe {
             // the task cache
             running_task_ = NULL;
             // last task has been finished, then check if it is loop
-            if ( ptask->status == task_status::task_status_running ) {
-                if ( ptask->repeat_count == 1 ) {
+            if ( _ptask->status == task_status::task_status_running ) {
+                if ( _ptask->repeat_count == 1 ) {
                     // Clear the task and release the memory
-                    __destory_task(ptask);
+                    __destory_task(_ptask);
                     --task_count_;
                     return;
                 }
-                if ( ptask->repeat_count != infinitive_task ) {
-                    --ptask->repeat_count;
+                if ( _ptask->repeat_count != infinitive_task ) {
+                    --_ptask->repeat_count;
                 }
-                ptask->next_time += ptask->duration;
-                __reset_task(ptask);
+                _ptask->next_time += _ptask->duration;
+                __reset_task(_ptask);
                 this->insert_task(ptask);
-            } else if ( ptask->status == task_status::task_status_stopped ) {
+            } else if ( _ptask->status == task_status::task_status_stopped ) {
                 // The task has been stopped by someone, quit it
-                __destory_task(ptask);
+                __destory_task(_ptask);
                 --task_count_;
                 return;
             }
@@ -329,7 +425,7 @@ namespace pe {
 
         // Default C'str
         loop::loop() : 
-            core_fd_(-1), core_events_(NULL), 
+            core_fd_(-1), core_events_(NULL),
             running_task_(NULL), task_count_(0), 
             running_(false), ret_code_(0) 
         { 
@@ -343,30 +439,30 @@ namespace pe {
         loop::~loop() {
             if ( core_fd_ == -1 ) return;
             if ( running_task_ != NULL ) {
-                __destory_task(running_task_);
+                __destory_task((full_task_t *)running_task_);
                 --task_count_;
             }
             #if COTASK_ON_SAMETIME
             for ( auto& lt : task_cache_ ) {
                 for ( auto pt : lt.second ) {
-                    __destory_task(pt);
+                    __destory_task((full_task_t *)pt);
                     --task_count_;
                 }
             }
             #else
             for ( auto& pt : task_cache_ ) {
-                __destory_task(pt.second);
+                __destory_task((full_task_t *)pt.second);
                 --task_count_;
             }
             #endif
             for ( auto& et : read_event_cache_ ) {
                 ::close( (long)et.first );
-                __destory_task(et.second);
+                __destory_task((full_task_t *)et.second);
                 --task_count_;
             }
             for ( auto& et : write_event_cache_ ) {
                 ::close( (long)et.first );
-                __destory_task(et.second);
+                __destory_task((full_task_t *)et.second);
                 --task_count_;
             }
             ::close(core_fd_);
@@ -381,29 +477,22 @@ namespace pe {
         // Get the return code
         int loop::return_code() const { return ret_code_; }
 
-        #ifdef FORCE_USE_UCONTEXT
-        // Get the main context
-        ucontext_t* loop::get_main_context() { return &main_ctx_; }
-        #else
-        jmp_buf* loop::get_main_jmpbuf() { return &main_jmp_; }
-        #endif
-        
         // Just add a will formated task
         void loop::insert_task( task * ptask ) {
             #if COTASK_ON_SAMETIME
-            auto _lt = task_cache_.find(ptask->next_time);
+            auto _lt = task_cache_.find(((full_task_t *)ptask)->next_time);
             if ( _lt == task_cache_.end() ) {
-                task_cache_[ptask->next_time] = (task_list_t){ptask};
+                task_cache_[((full_task_t *)ptask)->next_time] = (task_list_t){ptask};
             } else {
                 _lt->second.push_back(ptask);
             }
             #else
-            task_cache_[ptask->next_time] = ptask;
+            task_cache_[((full_task_t *)ptask)->next_time] = ptask;
             #endif
         }
         // Remove the task from timed-cache
         void loop::remove_task( task * ptask ) {
-            auto _lt = task_cache_.find(ptask->next_time);
+            auto _lt = task_cache_.find(((full_task_t *)ptask)->next_time);
             if ( _lt == task_cache_.end() ) return;
             for ( auto _i = _lt->second.begin(); 
                 _i != _lt->second.end(); ++_i )
@@ -416,23 +505,9 @@ namespace pe {
                 return;
             }
         }
-		// Yield current task and switch to main loop
-		void loop::swap_to_main_loop() {
-            ON_DEBUG_COTASK(
-                std::cout << "X " << running_task_->id << " => main" << std::endl;
-            )
-            #ifdef FORCE_USE_UCONTEXT
-            swapcontext(&running_task_->ctx, &main_ctx_);
-            // setcontext(&main_ctx_);
-            #else
-            if ( !setjmp(running_task_->buf) ) {
-                longjmp(main_jmp_, 1);
-            }
-            #endif
-        }
 
         task * loop::do_job( task_job_t job ) {
-            task *_ptask = __create_task(job);
+            full_task_t *_ptask = __create_task(job);
             ++task_count_;
             _ptask->repeat_count = oneshot_task;
             _ptask->next_time = std::chrono::high_resolution_clock::now();
@@ -445,7 +520,7 @@ namespace pe {
 
         task * loop::do_job( long fd, task_job_t job ) {
             if ( fd == -1 ) return NULL;
-            task *_ptask = __create_task_with_fd( fd, job );
+            full_task_t *_ptask = __create_task_with_fd( fd, job );
             ++task_count_;
             _ptask->repeat_count = oneshot_task;
             _ptask->next_time = std::chrono::high_resolution_clock::now();
@@ -457,7 +532,7 @@ namespace pe {
         }
 
         task * loop::do_loop( task_job_t job, duration_t interval ) {
-            task *_ptask = __create_task(job);
+            full_task_t *_ptask = __create_task(job);
             ++task_count_;
             _ptask->repeat_count = infinitive_task;
             _ptask->next_time = std::chrono::high_resolution_clock::now();
@@ -470,7 +545,7 @@ namespace pe {
         }
 
         task * loop::do_delay( task_job_t job, duration_t delay ) {
-            task *_ptask = __create_task(job);
+            full_task_t *_ptask = __create_task(job);
             ++task_count_;
             _ptask->repeat_count = oneshot_task;
             _ptask->next_time = std::chrono::high_resolution_clock::now() + delay;
@@ -484,6 +559,7 @@ namespace pe {
         // Event Monitor
         bool loop::monitor_task( int fd, task * ptask, event_type eventid, duration_t timedout ) {
             // Add to the core_events
+            full_task_t *_ptask = (full_task_t *)ptask;
             int _c_eid = (eventid == event_type::event_read ? core_event_read : core_event_write);
             if ( eventid == event_type::event_read ) {
                 if ( read_event_cache_.find( fd ) != read_event_cache_.end() ) 
@@ -513,21 +589,21 @@ namespace pe {
             // If the timedout is 0, which means the monitoring will stop
             // after next schedule loop. 
             if ( eventid == event_type::event_read ) {
-                ptask->read_until = task_time_now() + timedout;
+                _ptask->read_until = task_time_now() + timedout;
                 ON_DEBUG_COTASK(
-                    std::cout << "* MR <" << fd << ":" << ptask->id 
+                    std::cout << "* MR <" << fd << ":" << _ptask->id 
                         << "> for read event, timedout at "
-                        << ptask->read_until.time_since_epoch().count() << std::endl;
+                        << _ptask->read_until.time_since_epoch().count() << std::endl;
                 )
-                read_event_cache_[ fd ] = ptask;
+                read_event_cache_[ fd ] = _ptask;
             } else {
-                ptask->write_until = task_time_now() + timedout;
+                _ptask->write_until = task_time_now() + timedout;
                 ON_DEBUG_COTASK(
-                    std::cout << "* MW <" << fd << ":" << ptask->id 
+                    std::cout << "* MW <" << fd << ":" << _ptask->id 
                         << "> for write event, timedout at "
-                        << ptask->write_until.time_since_epoch().count() << std::endl;
+                        << _ptask->write_until.time_since_epoch().count() << std::endl;
                 )
-                write_event_cache_[ fd ] = ptask;
+                write_event_cache_[ fd ] = _ptask;
             }
             return true;
         }
@@ -540,22 +616,23 @@ namespace pe {
                 std::cout << "a task will be cancelled: " << ptask->id << std::endl;
                 task_debug_info( ptask );
             )
-            if ( ptask->related_fd != -1 ) {
-                auto _rit = read_event_cache_.find( ptask->related_fd );
-                if ( _rit != read_event_cache_.end() && _rit->second == ptask ) {
+            full_task_t *_ptask = (full_task_t *)ptask;
+            if ( _ptask->related_fd != -1 ) {
+                auto _rit = read_event_cache_.find( _ptask->related_fd );
+                if ( _rit != read_event_cache_.end() && _rit->second == _ptask ) {
                     ON_DEBUG_COTASK(
-                        std::cout << "the task is waiting on " << ptask->related_fd 
+                        std::cout << "the task is waiting on " << _ptask->related_fd 
                             << " for incoming, now remove it." << std::endl;
                     )
-                    ptask->read_until = task_time_now();
+                    _ptask->read_until = task_time_now();
                 }
-                auto _wit = write_event_cache_.find( ptask->id );
-                if ( _wit != write_event_cache_.end() && _rit->second == ptask ) {
+                auto _wit = write_event_cache_.find( _ptask->id );
+                if ( _wit != write_event_cache_.end() && _rit->second == _ptask ) {
                     ON_DEBUG_COTASK(
-                        std::cout << "the task is waiting on " << ptask->related_fd
+                        std::cout << "the task is waiting on " << _ptask->related_fd
                             << " for write buffer, now remove it." << std::endl;
                     )
-                    ptask->write_until = task_time_now();
+                    _ptask->write_until = task_time_now();
                 }
             }
         }
@@ -564,11 +641,11 @@ namespace pe {
         void loop::cancel_fd( long fd ) {
             auto _rit = read_event_cache_.find( fd );
             if ( _rit != read_event_cache_.end() ) {
-                _rit->second->read_until = task_time_now();
+                ((full_task_t *)_rit->second)->read_until = task_time_now();
             }
             auto _wit = write_event_cache_.find( fd );
             if ( _wit != write_event_cache_.end() ) {
-                _wit->second->write_until = task_time_now();
+                ((full_task_t *)_wit->second)->write_until = task_time_now();
             }
         }
 
@@ -589,14 +666,14 @@ namespace pe {
 
                     // !! Key line !!, remove from the cache each time
                     _tl.pop_front();
-                    __switch_task( _ptask );
+                    __switch_task( (full_task_t *)_ptask );
                 }
 
                 task_cache_.erase(task_cache_.begin());
                 #else
                 task *_ptask = task_cache_.begin()->second;
                 task_cache_.erase( task_cache_.begin() );
-                __switch_task(_ptask);
+                __switch_task((full_task_t *)_ptask);
                 #endif
             }
         }
@@ -648,7 +725,7 @@ namespace pe {
             if ( _count == -1 ) return;
             // If have any event, then do something
             // If not, then continue the loop
-            task *_ptask = NULL;
+            full_task_t *_ptask = NULL;
             for ( int i = 0; i < _count; ++i ) {
                 core_event_t *_pe = core_events_ + i;
                 int _fd = (intptr_t)core_get_so(_pe);
@@ -662,7 +739,7 @@ namespace pe {
                     auto _rt = read_event_cache_.find(_fd);
                     if ( _rt == read_event_cache_.end() ) break;
 
-                    _ptask = _rt->second;
+                    _ptask = (full_task_t *)_rt->second;
                     if ( core_is_error_event(_pe) ) {
                         _ptask->signal = waiting_signals::bad_signal;
                     } else {
@@ -681,7 +758,7 @@ namespace pe {
                     auto _wt = write_event_cache_.find(_fd);
                     if ( _wt == write_event_cache_.end() ) break;
 
-                    _ptask = _wt->second;
+                    _ptask = (full_task_t *)_wt->second;
                     if ( core_is_error_event(_pe) ) {
                         _ptask->signal = waiting_signals::bad_signal;
                     } else {
@@ -723,17 +800,19 @@ namespace pe {
             )
 
             if ( read_event_cache_.size() > 0 ) {
-                this->nearest_timeout_ = read_event_cache_.begin()->second->read_until;
+                this->nearest_timeout_ = 
+                    ((full_task_t *)(read_event_cache_.begin()->second))->read_until;
             } else {
                 if ( write_event_cache_.size() > 0 ) {
-                    this->nearest_timeout_ = write_event_cache_.begin()->second->write_until;
+                    this->nearest_timeout_ = 
+                        ((full_task_t *)(write_event_cache_.begin()->second))->write_until;
                 }
             }
 
             if ( read_event_cache_.size() > 0 ) {
                 auto _rt = read_event_cache_.begin();
                 do {
-                    task *_ptask = _rt->second;
+                    full_task_t *_ptask = (full_task_t *)_rt->second;
                     if ( _ptask->read_until > _now ) {
                         if ( _ptask->read_until < nearest_timeout_ ) 
                             nearest_timeout_ = _ptask->read_until;
@@ -759,7 +838,7 @@ namespace pe {
             if ( write_event_cache_.size() > 0 ) {
                 auto _wt = write_event_cache_.begin();
                 do {
-                    task *_ptask = _wt->second;
+                    full_task_t *_ptask = (full_task_t *)_wt->second;
                     if ( _ptask->write_until > _now ) {
                         if ( _ptask->write_until < nearest_timeout_ ) 
                             nearest_timeout_ = _ptask->write_until;
@@ -815,30 +894,30 @@ namespace pe {
 
             // bread from the loop, clear everything
             if ( running_task_ != NULL ) {
-                __destory_task(running_task_);
+                __destory_task((full_task_t *)running_task_);
                 --task_count_;
             }
             #if COTASK_ON_SAMETIME
             for ( auto& lt : task_cache_ ) {
                 for ( auto pt : lt.second ) {
-                    __destory_task(pt);
+                    __destory_task((full_task_t *)pt);
                     --task_count_;
                 }
             }
             #else
             for ( auto& pt : task_cache_ ) {
-                __destory_task(pt.second);
+                __destory_task((full_task_t *)pt.second);
                 --task_count_;
             }
             #endif
             for ( auto& et : read_event_cache_ ) {
                 ::close( (long)et.first );
-                __destory_task(et.second);
+                __destory_task((full_task_t *)et.second);
                 --task_count_;
             }
             for ( auto& et : write_event_cache_ ) {
                 ::close( (long)et.first );
-                __destory_task(et.second);
+                __destory_task((full_task_t *)et.second);
                 --task_count_;
             }
             ::close(core_fd_);
@@ -864,72 +943,81 @@ namespace pe {
                 fprintf(fp, "%*s|= <null>\n", lv * 4, ""); return;
             }
 
-            fprintf(fp, "%*s|= id: %ld\n", lv * 4, "", ptask->id);
-            fprintf(fp, "%*s|= is_event: %s\n", lv * 4, "", (ptask->is_event_id ? "true" : "false"));
+            full_task_t *_ptask = (full_task_t *)ptask;
+
+            fprintf(fp, "%*s|= id: %ld\n", lv * 4, "", _ptask->id);
+            fprintf(fp, "%*s|= is_event: %s\n", lv * 4, "", (_ptask->is_event_id ? "true" : "false"));
         #if FORCE_USE_UCONTEXT
-            fprintf(fp, "%*s|= stack: %s\n", lv * 4, "", pe::utils::ptr_str(ptask->stack).c_str());
+            fprintf(fp, "%*s|= stack: %s\n", lv * 4, "", pe::utils::ptr_str(_ptask->stack).c_str());
         #endif
             fprintf(fp, "%*s|= status: %s\n", lv * 4, "", 
-                (ptask->status == task_status_pending ? "pending" : 
-                    (ptask->status == task_status_paused ? "paused" : 
-                        (ptask->status == task_status_stopped ? "stopped" : 
+                (_ptask->status == task_status_pending ? "pending" : 
+                    (_ptask->status == task_status_paused ? "paused" : 
+                        (_ptask->status == task_status_stopped ? "stopped" : 
                             "running"))));
-            fprintf(fp, "%*s|= signal: %s\n", lv * 4, "", (ptask->signal == no_signal ? "no_signal" : 
-                (ptask->signal == bad_signal ? "bad_signal" : "receive_signal")));
-            fprintf(fp, "%*s|= hold_sig: %d, %d\n", lv * 4, "", ptask->hold_sig[0], ptask->hold_sig[1]);
-            fprintf(fp, "%*s|= related_fd: %ld\n", lv * 4, "", ptask->related_fd);
-            if ( ptask->repeat_count == infinitive_task ) {
+            fprintf(fp, "%*s|= signal: %s\n", lv * 4, "", (_ptask->signal == no_signal ? "no_signal" : 
+                (_ptask->signal == bad_signal ? "bad_signal" : "receive_signal")));
+            fprintf(fp, "%*s|= hold_sig: %d, %d\n", lv * 4, "", _ptask->hold_sig[0], _ptask->hold_sig[1]);
+            fprintf(fp, "%*s|= related_fd: %ld\n", lv * 4, "", _ptask->related_fd);
+            if ( _ptask->repeat_count == infinitive_task ) {
                 fprintf(fp, "%*s|= repeat_count: infinitive\n", lv * 4, "");
             } else {
-                fprintf(fp, "%*s|= repeat_count: %lu\n", lv * 4, "", ptask->repeat_count);
+                fprintf(fp, "%*s|= repeat_count: %lu\n", lv * 4, "", _ptask->repeat_count);
             }
-            fprintf(fp, "%*s|= flags: %x\n", lv * 4, "", *(uint8_t *)&ptask->reserved_flags);
-            if ( ptask->p_task != NULL ) {
+            fprintf(fp, "%*s|= flags: %x\n", lv * 4, "", *(uint8_t *)&_ptask->reserved_flags);
+            if ( _ptask->p_task != NULL ) {
                 fprintf(fp, "%*s|= parent: \n", lv * 4, "");
-                task_debug_info( ptask->p_task, fp, lv + 1 );
+                task_debug_info( _ptask->p_task, fp, lv + 1 );
             }
         }
         // Force to exit a task
         void task_exit( task * ptask ) {
             if ( ptask == NULL || ptask == __this_loop->get_running_task() ) return;
-            ptask->status = task_status_stopped;
+            full_task_t *_ptask = (full_task_t *)ptask;
+            _ptask->status = task_status_stopped;
             __this_loop->cancel_monitor(ptask);
             __this_loop->remove_task(ptask);
-            ptask->next_time = task_time_now();
-            ptask->repeat_count = 1;
+            _ptask->next_time = task_time_now();
+            _ptask->repeat_count = 1;
             // Only put back a task not holding anything
-            if ( ptask->related_fd == -1 ) {
+            if ( _ptask->related_fd == -1 ) {
                 __this_loop->insert_task(ptask);
             }
         }
         // Go on a task
         void task_go_on( task * ptask ) {
             if ( ptask == NULL ) return;
-            if ( ptask->hold_sig[1] == -1 ) return;
-            ignore_result(write( ptask->hold_sig[1], "1", 1 ));
+            full_task_t *_ptask = (full_task_t *)ptask;
+            if ( _ptask->hold_sig[1] == -1 ) return;
+            ignore_result(write( _ptask->hold_sig[1], "1", 1 ));
         }
 
         // Stop a task's holding
         void task_stop( task * ptask ) {
             if ( ptask == NULL ) return;
-            if ( ptask->hold_sig[1] != -1 ) {
-                ignore_result(write( ptask->hold_sig[1], "0", 1 ));
+            full_task_t *_ptask = (full_task_t *)ptask;
+            if ( _ptask->hold_sig[1] != -1 ) {
+                ignore_result(write( _ptask->hold_sig[1], "0", 1 ));
             }
             __this_loop->cancel_monitor(ptask);
         }
         // Register task's exit job
         void task_register_exit_job(task * ptask, task_job_t job) {
-            if ( ptask->exitjob ) {
-                delete ptask->exitjob;
+            if ( ptask == NULL ) return;
+            full_task_t *_ptask = (full_task_t *)ptask;
+            if ( _ptask->exitjob ) {
+                delete _ptask->exitjob;
             }
-            ptask->exitjob = new task_job_t(job);
+            _ptask->exitjob = new task_job_t(job);
         }
 
         // Remove task exit job
         void task_remove_exit_job(task * ptask) {
-            if ( ptask->exitjob == NULL ) return;
-            delete ptask->exitjob;
-            ptask->exitjob = NULL;
+            if ( ptask == NULL ) return;
+            full_task_t *_ptask = (full_task_t *)ptask;
+            if ( _ptask->exitjob == NULL ) return;
+            delete _ptask->exitjob;
+            _ptask->exitjob = NULL;
         }
 
         namespace this_task {
@@ -947,15 +1035,27 @@ namespace pe {
                 if ( _ptask == NULL ) return 0;
                 return _ptask->id;
             }
+            // Get task status
+            task_status status() {
+                full_task_t *_ptask = (full_task_t *)__this_loop->get_running_task();
+                if ( _ptask == NULL ) return task_status_stopped;
+                return _ptask->status;
+            }
+            // Get task last waiting signal
+            waiting_signals last_signal() {
+                full_task_t *_ptask = (full_task_t *)__this_loop->get_running_task();
+                if ( _ptask == NULL ) return bad_signal;
+                return _ptask->signal;
+            }
             // Cancel loop inside
             void cancel_loop() {
-                pe::co::task *_ptask = __this_loop->get_running_task();
+                full_task_t *_ptask = (full_task_t *)__this_loop->get_running_task();
                 if ( _ptask == NULL ) return;
                 _ptask->repeat_count = 1;
             }
             // Force to switch to main context
             void yield() {
-                pe::co::task *_ptask = __this_loop->get_running_task();
+                full_task_t *_ptask = (full_task_t *)__this_loop->get_running_task();
                 if ( _ptask == NULL ) return;
 
                 // Will not switch task if it already been masked as stopped.
@@ -967,29 +1067,29 @@ namespace pe {
                 __this_loop->insert_task(_ptask);
 
                 // Force to switch to main context
-                __this_loop->swap_to_main_loop();
+                __swap_to_main();
             }
 
             // Yield if the condition is true
             bool yield_if( bool cond ) { 
                 if ( cond ) yield(); 
-                pe::co::task * _ptask = __this_loop->get_running_task();
+                full_task_t *_ptask = (full_task_t *)__this_loop->get_running_task();
                 if ( _ptask == NULL ) return cond;
-                return cond & (_ptask->status != task_status_stopped);
+                return cond && (_ptask->status != task_status_stopped);
             }
 
             // Yield if the condition is false
             bool yield_if_not( bool cond ) {
                 if ( !cond ) yield();
-                pe::co::task * _ptask = __this_loop->get_running_task();
+                full_task_t *_ptask = (full_task_t *)__this_loop->get_running_task();
                 if ( _ptask == NULL ) return cond;
-                return cond & (_ptask->status != task_status_stopped);
+                return cond && (_ptask->status != task_status_stopped);
             }
 
             // Hold current task, yield, but not put back
             // to the timed based cache
             bool holding() {
-                pe::co::task *_ptask = __this_loop->get_running_task();
+                full_task_t *_ptask = (full_task_t *)__this_loop->get_running_task();
                 if ( _ptask == NULL ) return false;
                 if ( _ptask->hold_sig[0] == -1 ) {
                     while ( yield_if( pipe(_ptask->hold_sig) < 0 ) );
@@ -1007,7 +1107,7 @@ namespace pe {
                     ) {
                         return false;
                     }
-                    __this_loop->swap_to_main_loop();
+                    __swap_to_main();
                 } while ( _ptask->signal == pe::co::no_signal );
                 _ptask->related_fd = -1;
                 if ( _ptask->status == task_status_stopped ) return false;
@@ -1018,7 +1118,7 @@ namespace pe {
             }
             // Hold the task until timedout
             bool holding_until( pe::co::duration_t timedout ) {
-                pe::co::task *_ptask = __this_loop->get_running_task();
+                full_task_t *_ptask = (full_task_t *)__this_loop->get_running_task();
                 if ( _ptask == NULL ) return false;
                 if ( _ptask->hold_sig[0] == -1 ) {
                     while ( yield_if( pipe(_ptask->hold_sig) < 0 ) );
@@ -1035,7 +1135,7 @@ namespace pe {
                     return false;
                 }
                 _ptask->related_fd = _ptask->hold_sig[0];
-                __this_loop->swap_to_main_loop();
+                __swap_to_main();
                 _ptask->related_fd = -1;
                 if ( _ptask->status == task_status_stopped ) return false;
                 if ( _ptask->signal == pe::co::bad_signal ) return false;
@@ -1050,7 +1150,7 @@ namespace pe {
                 pe::co::event_type eventid, 
                 pe::co::duration_t timedout
             ) {
-                pe::co::task *_ptask = __this_loop->get_running_task();
+                full_task_t *_ptask = (full_task_t *)__this_loop->get_running_task();
                 if ( _ptask == NULL ) return pe::co::bad_signal;
                 if ( _ptask->status == task_status_stopped ) return bad_signal;
                 if ( _ptask->related_fd != -1 ) return bad_signal;
@@ -1063,7 +1163,7 @@ namespace pe {
                     return pe::co::bad_signal;
                 }
                 _ptask->related_fd = (long)_ptask->id;
-                __this_loop->swap_to_main_loop();
+                __swap_to_main();
                 _ptask->related_fd = -1;
                 if ( _ptask->status == task_status_stopped ) return bad_signal;
                 return _ptask->signal;
@@ -1087,7 +1187,7 @@ namespace pe {
                 pe::co::duration_t timedout
             ) {
                 if ( fd == -1 ) return pe::co::bad_signal;
-                pe::co::task *_ptask = __this_loop->get_running_task();
+                full_task_t *_ptask = (full_task_t *)__this_loop->get_running_task();
                 if ( _ptask == NULL ) return pe::co::bad_signal;
                 if ( _ptask->status == task_status_stopped ) return bad_signal;
                 _ptask->status = pe::co::task_status::task_status_paused;
@@ -1100,7 +1200,7 @@ namespace pe {
                     _ptask->related_fd = -1;
                     return pe::co::bad_signal;
                 }
-                __this_loop->swap_to_main_loop();
+                __swap_to_main();
                 _ptask->related_fd = -1;
                 if ( _ptask->status == task_status_stopped ) return bad_signal;
                 return _ptask->signal;
@@ -1121,7 +1221,9 @@ namespace pe {
                 pe::co::event_type eventid,
                 pe::co::duration_t timedout                
             ) {
-                if ( ptask == NULL || ptask->is_event_id == false ) return pe::co::bad_signal;
+                if ( ptask == NULL || 
+                    ((full_task_t *)ptask)->is_event_id == false ) 
+                    return pe::co::bad_signal;
                 return wait_fd_for_event((long)ptask->id, eventid, timedout);
             }
             bool wait_other_task_for_event_if(
@@ -1137,7 +1239,7 @@ namespace pe {
 
             // Sleep
             void sleep( pe::co::duration_t duration ) {
-                pe::co::task *_ptask = __this_loop->get_running_task();
+                full_task_t *_ptask = (full_task_t *)__this_loop->get_running_task();
                 if ( _ptask == NULL ) return;
                 if ( _ptask->status == task_status_stopped ) return;
 
@@ -1148,16 +1250,16 @@ namespace pe {
                 __this_loop->insert_task(_ptask);
 
                 // Force to switch to main context
-                __this_loop->swap_to_main_loop();
+                __swap_to_main();
             }
             // Tick time
             void begin_tick() {
-                pe::co::task *_ptask = __this_loop->get_running_task();
+                full_task_t *_ptask = (full_task_t *)__this_loop->get_running_task();
                 if ( _ptask == NULL ) return;
                 _ptask->lt_time = task_time_now();
             }
             double tick() {
-                pe::co::task *_ptask = __this_loop->get_running_task();
+                full_task_t *_ptask = (full_task_t *)__this_loop->get_running_task();
                 if ( _ptask == NULL ) return -1.f;
                 auto _n = task_time_now();
                 std::chrono::duration< double, std::milli > _t = _n - _ptask->lt_time;
@@ -1166,7 +1268,7 @@ namespace pe {
             }
             // Dump debug info to given FILE
             void debug_info( FILE * fp ) {
-                pe::co::task *_ptask = __this_loop->get_running_task();
+                full_task_t *_ptask = (full_task_t *)__this_loop->get_running_task();
                 task_debug_info(_ptask, fp, 0);
             }
         }
@@ -1214,7 +1316,7 @@ namespace pe {
             
             // Get the parent task
             task * get_task() {
-                task * _ttask = __this_loop->get_running_task();
+                full_task_t * _ttask = (full_task_t *)__this_loop->get_running_task();
                 if ( _ttask == NULL ) return NULL;
                 return _ttask->p_task;
             }
@@ -1265,7 +1367,6 @@ namespace pe {
                 task *_ptask = parent_task::get_task();
                 if ( _ptask == NULL ) return;
                 task_exit(_ptask);
-                this_task::get_task()->p_task = NULL;
             }
         }
     }

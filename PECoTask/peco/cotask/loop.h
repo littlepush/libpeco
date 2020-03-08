@@ -121,13 +121,6 @@ namespace pe {
 			int 					core_fd_;
 			core_event_t 			*core_events_;
 
-			// The basic Context for main loop
-            #ifdef FORCE_USE_UCONTEXT
-			ucontext_t 				main_ctx_;
-            #else
-            jmp_buf                 main_jmp_;
-            #endif
-
 			// Temp storage of current running task
 			pe::co::task 			*running_task_;
 
@@ -180,21 +173,11 @@ namespace pe {
             // Get the return code
             int return_code() const;
 
-            #ifdef FORCE_USE_UCONTEXT
-            // Get the main context
-            ucontext_t* get_main_context();
-            #else
-            jmp_buf* get_main_jmpbuf();
-            #endif
-
             // Just add a will formated task
             void insert_task( task * ptask );
 
             // Remove the task from timed-cache
             void remove_task( task * ptask );
-			
-			// Yield current task and switch to main loop
-			void swap_to_main_loop();
 
 			// Create a oneshot task
             task * do_job( task_job_t job );
@@ -315,6 +298,12 @@ namespace pe {
 
             // Get the task id
             task_id get_id();
+
+            // Get task status
+            task_status status();
+
+            // Get task last waiting signal
+            waiting_signals last_signal();
 
             // Cancel loop inside
             void cancel_loop();

@@ -13,7 +13,6 @@ namespace pe {
     namespace co {
 
         void __stepqueue( taskadapter * ta ) {
-            task* _tt = this_task::get_task();
             std::shared_ptr< semaphore > _psem(new semaphore);
             ta->sem = _psem.get();
 
@@ -24,7 +23,7 @@ namespace pe {
             // 
             do {
                 this_task::yield();
-                if ( _tt->status == task_status_stopped ) break;
+                if ( this_task::status() == task_status_stopped ) break;
 
                 // Go Step if has any
                 // Continue to do, ignore the flag
@@ -36,11 +35,11 @@ namespace pe {
                     ta->job_q.pop();
                     _j();
                     this_task::yield();
-                    if ( _tt->status == task_status_stopped ) break;
+                    if ( this_task::status() == task_status_stopped ) break;
                 }
 
                 // Break if the task has already been stopped
-                if ( _tt->status == task_status_stopped ) break;
+                if ( this_task::status() == task_status_stopped ) break;
             } while ( _psem->fetch() );
 
             ON_DEBUG_COTASK(
@@ -79,7 +78,7 @@ namespace pe {
                 std::cout << "destory taskadapter with task id: " << t->id << std::endl;
             )
             sem->cancel();
-            t->status = task_status_stopped;
+            task_exit(t);
         }
 
         void taskadapter::step( task_job_t job ) {

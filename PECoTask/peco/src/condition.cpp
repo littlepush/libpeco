@@ -100,9 +100,9 @@ namespace pe {
             task *_ptask = this_task::get_task();
             pending_tasks_[_ptask] = true;
             bool _r = this_task::holding_until(t);
-            if ( _ptask->signal == pe::co::no_signal ) {
+            if ( this_task::last_signal() == pe::co::no_signal ) {
                 // Force to erase current task cause its timeout
-                pending_tasks_.erase(this_task::get_task());
+                pending_tasks_.erase(_ptask);
             }
             return _r;
         }
@@ -178,7 +178,7 @@ namespace pe {
                 );
                 if ( _sig == bad_signal ) {
                     // Bad Signal not because the semaphore been destoried
-                    if ( this_task::get_task()->status == task_status_stopped ) {
+                    if ( this_task::status() == task_status_stopped ) {
                         --c_ref_;
                     }
                     return false;
@@ -220,7 +220,7 @@ namespace pe {
                 --c_ref_;
             } else {
                 // Bad Signal not because the semaphore been destoried
-                if ( this_task::get_task()->status == task_status_stopped ) {
+                if ( this_task::status() == task_status_stopped ) {
                     --c_ref_;
                 }
             }
