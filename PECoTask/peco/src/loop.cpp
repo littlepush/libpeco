@@ -10,12 +10,18 @@
 #include <peco/cotask/loop.h>
 #include <signal.h>
 
+#ifndef __APPLE__
+
+// Force use ucontext is only available on linux platform
+
 // For old libpeco version, forct to use ucontext
 #if defined(__LIBPECO_USE_GNU__) && (LIBPECO_STANDARD_VERSION < 0x00020001)
 #define FORCE_USE_UCONTEXT 1
 // When enabled ucontext and we are using gnu lib, can use ucontext
 #elif defined(__LIBPECO_USE_GNU__) && defined(ENABLE_UCONTEXT) && (ENABLE_UCONTEXT == 1)
 #define FORCE_USE_UCONTEXT 1
+#endif
+
 #endif
 
 #ifdef FORCE_USE_UCONTEXT
@@ -279,7 +285,7 @@ namespace pe {
             #endif
         }
         void __reset_task( full_task_t* ptask ) {
-        #if FORCE_USE_UCONTEXT
+        #ifdef FORCE_USE_UCONTEXT
             getcontext(&(ptask->ctx));
             ptask->ctx.uc_stack.ss_sp = ptask->stack;
             ptask->ctx.uc_stack.ss_size = mu::mem::page::piece_size;
@@ -429,11 +435,12 @@ namespace pe {
             running_task_(NULL), task_count_(0), 
             running_(false), ret_code_(0) 
         { 
+            nearest_timeout_ = task_time_now();
             if ( __this_loop != NULL ) {
                 throw std::runtime_error("cannot create more than one loop in one thread");
             }
+
             __this_loop = this;
-            nearest_timeout_ = task_time_now();
         }
         // Default D'str
         loop::~loop() {
@@ -947,9 +954,7 @@ namespace pe {
 
             fprintf(fp, "%*s|= id: %ld\n", lv * 4, "", _ptask->id);
             fprintf(fp, "%*s|= is_event: %s\n", lv * 4, "", (_ptask->is_event_id ? "true" : "false"));
-        #if FORCE_USE_UCONTEXT
             fprintf(fp, "%*s|= stack: %s\n", lv * 4, "", pe::utils::ptr_str(_ptask->stack).c_str());
-        #endif
             fprintf(fp, "%*s|= status: %s\n", lv * 4, "", 
                 (_ptask->status == task_status_pending ? "pending" : 
                     (_ptask->status == task_status_paused ? "paused" : 
@@ -1372,8 +1377,10 @@ namespace pe {
     }
 }
 
+#ifdef FORCE_USE_UCONTEXT
 #ifdef __APPLE__
 #pragma clang diagnostic pop
+#endif
 #endif
 
 // Push Chen
