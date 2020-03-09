@@ -121,16 +121,16 @@ namespace pe {
         };
 
         // The thread local loop point
-        loop * __this_loop = NULL;
+        thread_local loop * __this_loop = NULL;
 
         #ifdef FORCE_USE_UCONTEXT
-        ucontext_t      __main_context;
+        thread_local ucontext_t      __main_context;
         #else
-        jmp_buf         __main_context;
+        thread_local jmp_buf         __main_context;
         #endif
 
         // The main loop
-        loop this_loop;
+        thread_local loop this_loop;
 
         ON_DEBUG(
             bool g_cotask_trace_flag = false;
@@ -598,9 +598,12 @@ namespace pe {
             {
                 if ( *_i != ptask ) continue;
                 _lt->second.erase(_i);
-                if ( _lt->second.size() == 0 ) {
-                    task_cache_.erase(_lt);
-                }
+                // This is a bug!!!, do not remove any list in the cache
+                // cause in normal schedule loop, it will be removed 
+                // automatically! Just remove the task is enough.
+                // if ( _lt->second.size() == 0 ) {
+                //     task_cache_.erase(_lt);
+                // }
                 return;
             }
         }
