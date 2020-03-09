@@ -10,18 +10,12 @@
 #include <peco/cotask/loop.h>
 #include <signal.h>
 
-#ifndef __APPLE__
-
-// Force use ucontext is only available on linux platform
-
 // For old libpeco version, forct to use ucontext
 #if defined(__LIBPECO_USE_GNU__) && (LIBPECO_STANDARD_VERSION < 0x00020001)
 #define FORCE_USE_UCONTEXT 1
 // When enabled ucontext and we are using gnu lib, can use ucontext
 #elif defined(__LIBPECO_USE_GNU__) && defined(ENABLE_UCONTEXT) && (ENABLE_UCONTEXT == 1)
 #define FORCE_USE_UCONTEXT 1
-#endif
-
 #endif
 
 #ifdef FORCE_USE_UCONTEXT
@@ -31,6 +25,14 @@
 #endif
 
 #include <thread>
+
+#else
+
+// We donot use ucontext
+#if defined(USING_SIGUSR1_STACK) && USING_SIGUSR1_STACK == 1
+#define PECO_SIGNAL_STACK 1
+#endif
+
 #endif
 
 #ifdef FORCE_USE_UCONTEXT
@@ -107,22 +109,28 @@ namespace pe {
             // Context for the job
             ucontext_t          ctx;
         #else
+
+        #ifdef PECO_SIGNAL_STACK
+            // We only need to save the stack info when we use SIGUSR1 to create new stack
             stack_t             task_stack;
+        #else
+            pthread_attr_t      task_attr;
+        #endif
             jmp_buf             buf;
         #endif
         };
 
         // The thread local loop point
-        thread_local loop * __this_loop = NULL;
+        loop * __this_loop = NULL;
 
         #ifdef FORCE_USE_UCONTEXT
-        thread_local ucontext_t      __main_context;
+        ucontext_t      __main_context;
         #else
-        thread_local jmp_buf         __main_context;
+        jmp_buf         __main_context;
         #endif
 
         // The main loop
-        thread_local loop this_loop;
+        loop this_loop;
 
         ON_DEBUG(
             bool g_cotask_trace_flag = false;
@@ -139,6 +147,7 @@ namespace pe {
 
         // Dump Stack Info
         void __dump_call_stack( FILE* fd ) {
+        #if defined(PECO_SIGNAL_STACK) || defined(FORCE_USE_UCONTEXT)
             intptr_t _stack[64];
             size_t _ssize = backtrace((void **)_stack, 64);
             fprintf(fd, "fetch callstack: %u\n", (uint32_t)_ssize);
@@ -163,6 +172,7 @@ namespace pe {
             #else
             backtrace_symbols_fd((void **)_stack, _ssize, fileno(fd));
             #endif
+        #endif
         }
 
         typedef void (*context_job_t)(void);
@@ -170,13 +180,23 @@ namespace pe {
         #ifdef FORCE_USE_UCONTEXT
         inline void __job_run( task_job_t* job )
         #else
+        #ifdef PECO_SIGNAL_STACK
         inline void __job_run( int sig )
+        #else
+        inline void * __job_run( void * ptask )
+        #endif
         #endif
         {
         #ifndef FORCE_USE_UCONTEXT
+            #ifdef PECO_SIGNAL_STACK
             full_task_t* _ptask = (full_task_t *)__this_loop->get_running_task();
             auto job = _ptask->pjob;
             if ( !setjmp(_ptask->buf) ) return;
+            #else
+            auto job = ((full_task_t *)ptask)->pjob;
+            if ( !setjmp(((full_task_t *)ptask)->buf) ) return NULL;
+            #endif
+
         #endif
             try {
                 (*job)(); 
@@ -215,6 +235,11 @@ namespace pe {
             #ifndef FORCE_USE_UCONTEXT
             // Long Jump back to the main context
             __swap_to_main();
+
+            #ifndef PECO_SIGNAL_STACK
+            return NULL;
+            #endif
+
             #endif
         }
 
@@ -247,9 +272,18 @@ namespace pe {
 
             #else
 
+            #ifdef PECO_SIGNAL_STACK
+
             _ptask->task_stack.ss_flags = 0;
             _ptask->task_stack.ss_size = mu::mem::page::piece_size;
             _ptask->task_stack.ss_sp = _ptask->stack;
+
+            #else
+
+            pthread_attr_init(&_ptask->task_attr);
+            pthread_attr_setstack(&_ptask->task_attr, _ptask->stack, mu::mem::page::piece_size);
+
+            #endif
 
             #endif
 
@@ -315,9 +349,17 @@ namespace pe {
             makecontext(&(ptask->ctx), (context_job_t)&__job_run, 1, ptask->pjob);
         #else
 
+        #ifdef PECO_SIGNAL_STACK
             // Reset the task stack to the beginning
             ptask->task_stack.ss_sp = ptask->stack;
             ptask->task_stack.ss_flags = 0;
+        #else
+            // Create another stack
+            pthread_attr_destroy(&ptask->task_attr);
+            pthread_attr_init(&ptask->task_attr);
+            pthread_attr_setstack(&ptask->task_attr, 
+                ptask->stack, mu::mem::page::piece_size);
+        #endif
             // make this task looks like a new one
             ptask->status = task_status_pending;
         #endif
@@ -369,6 +411,9 @@ namespace pe {
                 ptask->next_task->prev_task = ptask->prev_task;
             }
 
+            #ifndef PECO_SIGNAL_STACK
+            pthread_attr_destroy(&ptask->task_attr);
+            #endif
             free(ptask);
         }
 
@@ -397,6 +442,7 @@ namespace pe {
             swapcontext(&__main_context, &(_ptask->ctx));
             #else
 
+            #ifdef PECO_SIGNAL_STACK
             // Set to use the target task's stack to handler the signal, 
             // which means context swap
             // New task
@@ -411,6 +457,17 @@ namespace pe {
                 _ptask->task_stack.ss_flags = SS_DISABLE;
                 sigaltstack(&(_ptask->task_stack), NULL);
             }
+            #else
+
+            // Create a thread, and it will return immediately
+            if ( _tstatus == task_status_pending ) {
+                pthread_t _t;
+                ignore_result( pthread_create(&_t, &(_ptask->task_attr), &__job_run, (void *)_ptask) );
+                void *_st;
+                pthread_join(_t, &_st);
+            }
+
+            #endif
             // Save current main jmp's position and jump to the 
             // task stack
             if ( !setjmp(__main_context) ) {
@@ -461,12 +518,14 @@ namespace pe {
 
             #ifndef FORCE_USE_UCONTEXT
 
+            #ifdef PECO_SIGNAL_STACK
             // register the signal to run job
             struct sigaction    sa;            
             sa.sa_handler = &__job_run;
             sa.sa_flags = SA_ONSTACK;
             sigemptyset(&sa.sa_mask);
             sigaction(SIGUSR1, &sa, NULL);
+            #endif
 
             #endif
         }

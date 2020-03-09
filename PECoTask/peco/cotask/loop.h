@@ -216,7 +216,7 @@ namespace pe {
         };
 
         // Get current thread's run loop
-        extern thread_local loop this_loop;
+        extern loop this_loop;
         
         // Dump the debug info of a task
         void task_debug_info( task* ptask, FILE *fp = stdout, int lv = 0);
