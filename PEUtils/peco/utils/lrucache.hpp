@@ -90,8 +90,13 @@ namespace pe { namespace utils {
             auto _it = index_map_.find(key);
             if ( _it == index_map_.end() ) {
                 if ( fa ) {
-                    item_pool_.emplace_front( std::make_pair(key, fa(key)) );
+                    _ValueType _newfetch(fa(key));
+                    _it = index_map_.find(key);
+                    // Other task may already set the value during we fetch the object
+                    if ( _it != index_map_.end() ) return _it->second->second;
+                    item_pool_.emplace_front( std::make_pair(key, std::move(_newfetch)) );
                 } else {
+                    // Just set an empty value
                     _ValueType _empty_value;
                     item_pool_.emplace_front( std::make_pair(key, std::move(_empty_value) ));
                 }

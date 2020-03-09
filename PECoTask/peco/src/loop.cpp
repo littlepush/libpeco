@@ -42,9 +42,9 @@
 #include <setjmp.h>
 #endif
 
-
 #ifdef __APPLE__
 #include <peco/cotask/kevent_wrapper.h>
+#include <cxxabi.h>
 #else
 #include <peco/cotask/epoll_wrapper.h>
 #endif
@@ -139,11 +139,30 @@ namespace pe {
 
         // Dump Stack Info
         void __dump_call_stack( FILE* fd ) {
-        #ifdef __LIBPECO_USE_GNU__
-            void * _stack[64];
-            size_t _ssize = backtrace(_stack, 64);
-            backtrace_symbols_fd(_stack, _ssize, fileno(fd));
-        #endif
+            intptr_t _stack[64];
+            size_t _ssize = backtrace((void **)_stack, 64);
+            fprintf(fd, "fetch callstack: %u\n", (uint32_t)_ssize);
+            #ifdef __APPLE__
+            char **_stackstrs = backtrace_symbols((void **)_stack, _ssize);
+            char* _symbol = (char *)malloc(sizeof(char) * 1024);
+            char* _module = (char *)malloc(sizeof(char) * 1024);
+            int _offset = 0;
+            char* _addr = (char *)malloc(sizeof(char) * 48);
+            for ( size_t i = 0; i < _ssize; ++i ) {
+                sscanf(_stackstrs[i], "%*s %s %s %s %*s %d", 
+                    _module, _addr, _symbol, &_offset);
+                int _valid_cxx_name = 0;
+                char * _func = abi::__cxa_demangle(_symbol, NULL, 0, &_valid_cxx_name);
+                fprintf(fd, "(%s)\t0x%s - %s + %d\n", 
+                    _module, _addr, _func, _offset);
+                if ( _func ) free(_func);
+            }
+            free(_addr);
+            free(_module);
+            free(_symbol);
+            #else
+            backtrace_symbols_fd((void **)_stack, _ssize, fileno(fd));
+            #endif
         }
 
         typedef void (*context_job_t)(void);
@@ -317,6 +336,7 @@ namespace pe {
                 delete ptask->exitjob;
                 ptask->exitjob = NULL;
             }
+
             delete ptask->pjob;
             if ( ptask->hold_sig[0] != -1 ) {
                 ::close(ptask->hold_sig[0]);
@@ -385,14 +405,11 @@ namespace pe {
                 // And the handler will call setjmp and return immediately
                 sigaltstack(&(_ptask->task_stack), NULL);
 
-                // register the signal to run job
-                struct sigaction    sa;            
-                sa.sa_handler = &__job_run;
-                sa.sa_flags = SA_ONSTACK;
-                sigemptyset(&sa.sa_mask);
-                sigaction(SIGUSR1, &sa, NULL);
-
                 raise(SIGUSR1);
+
+                // Disable the altstack
+                _ptask->task_stack.ss_flags = SS_DISABLE;
+                sigaltstack(&(_ptask->task_stack), NULL);
             }
             // Save current main jmp's position and jump to the 
             // task stack
@@ -441,6 +458,17 @@ namespace pe {
             }
 
             __this_loop = this;
+
+            #ifndef FORCE_USE_UCONTEXT
+
+            // register the signal to run job
+            struct sigaction    sa;            
+            sa.sa_handler = &__job_run;
+            sa.sa_flags = SA_ONSTACK;
+            sigemptyset(&sa.sa_mask);
+            sigaction(SIGUSR1, &sa, NULL);
+
+            #endif
         }
         // Default D'str
         loop::~loop() {
