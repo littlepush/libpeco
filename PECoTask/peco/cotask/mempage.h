@@ -20,7 +20,7 @@
 #endif
 
 #ifndef _MEM_PIECE_SIZE
-#define _MEM_PIECE_SIZE     1048576UL   // 1MB
+#define _MEM_PIECE_SIZE     524288UL    // 512KB
 #endif
 
 namespace mu {
