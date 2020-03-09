@@ -425,8 +425,10 @@ namespace pe {
                 ptask->next_task->prev_task = ptask->prev_task;
             }
 
+            #ifndef FORCE_USE_UCONTEXT
             #ifndef PECO_SIGNAL_STACK
             pthread_attr_destroy(&ptask->task_attr);
+            #endif
             #endif
             free(ptask);
         }
