@@ -115,7 +115,6 @@ namespace pe {
             stack_t             task_stack;
         #else
             pthread_attr_t      task_attr;
-            void *              backup_stack;
         #endif
             jmp_buf             buf;
         #endif
@@ -196,16 +195,6 @@ namespace pe {
             #else
             auto job = ((full_task_t *)ptask)->pjob;
             if ( !setjmp(((full_task_t *)ptask)->buf) ) {
-                #ifdef LOOP_USE_MEMPAGE
-                ((full_task_t *)ptask)->backup_stack = mu::mem::page::main.get_piece();
-                #else
-                ((full_task_t *)ptask)->backup_stack = (stack_ptr)malloc(mu::mem::page::piece_size);
-                #endif
-                memcpy(
-                    ((full_task_t *)ptask)->backup_stack, 
-                    ((full_task_t *)ptask)->stack,
-                    mu::mem::page::piece_size
-                );
                 pthread_exit(NULL);
                 return NULL;
             }
@@ -481,12 +470,6 @@ namespace pe {
                 ignore_result( pthread_create(&_t, &(_ptask->task_attr), &__job_run, (void *)_ptask) );
                 void *_st;
                 pthread_join(_t, &_st);
-                memcpy(_ptask->stack, _ptask->backup_stack, mu::mem::page::piece_size);
-                #ifdef LOOP_USE_MEMPAGE
-                mu::mem::page::main.release_piece(_ptask->backup_stack);
-                #else
-                free(_ptask->backup_stack);
-                #endif
             }
 
             #endif
