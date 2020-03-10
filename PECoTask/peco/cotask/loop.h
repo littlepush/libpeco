@@ -106,9 +106,9 @@ namespace pe {
     #endif    
 
     #ifdef ENABLE_THREAD_LOOP
-    #define __thread__attr                  thread_local
+    #define __thread_attr                   thread_local
     #else
-    #define __thread__attr
+    #define __thread_attr
     #endif
 
 		/*
@@ -126,12 +126,6 @@ namespace pe {
             // Return Code
             bool                    running_;
             int                     ret_code_;
-
-			// All time-based tasks
-            task_time_t             nearest_timeout_;
-
-            // Internal task switcher
-            void __switch_task( task* ptask );
 
             // Timed task schedule
             void __timed_task_schedule();
@@ -159,12 +153,6 @@ namespace pe {
 
             // Get the return code
             int return_code() const;
-
-            // Just add a will formated task
-            void insert_task( task * ptask );
-
-            // Remove the task from timed-cache
-            void remove_task( task * ptask );
 
 			// Create a oneshot task
             task * do_job( task_job_t job );
@@ -202,7 +190,7 @@ namespace pe {
             bool is_running() const;
 
             // This Loop
-            static __thread__attr loop    main;
+            static __thread_attr loop       main;
         };
 
         #define this_loop       loop::main
