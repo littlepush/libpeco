@@ -68,7 +68,7 @@
 #define CO_MAX_SO_EVENTS		25600
 #endif
 
-#include <peco/cotask/mempage.h>
+// #include <peco/cotask/mempage.h>
 
 #ifdef DEBUG
 #define ON_DEBUG(...)       __VA_ARGS__
@@ -105,17 +105,16 @@ namespace pe {
         typedef struct epoll_event          core_event_t;
     #endif    
 
-    #ifndef COTASK_ON_SAMETIME
-    #define COTASK_ON_SAMETIME  1
+    #ifdef ENABLE_THREAD_LOOP
+    #define __thread__attr                  thread_local
+    #else
+    #define __thread__attr
     #endif
 
 		/*
 		 * The main loop of the coroutine schedule
 		 * */
         class loop {
-        #if COTASK_ON_SAMETIME
-            typedef std::list< task * >     task_list_t;
-        #endif
         protected: 
 			// The main file descriptor to be used on wait core_events
 			int 					core_fd_;
@@ -129,16 +128,7 @@ namespace pe {
             int                     ret_code_;
 
 			// All time-based tasks
-            #if COTASK_ON_SAMETIME
-			std::map< task_time_t, task_list_t >	task_cache_;
-            #else
-            std::map< task_time_t, task * >         task_cache_;
-            #endif
-
-            // All event-based tasks
-            std::map< intptr_t, task * >    read_event_cache_;
-            std::map< intptr_t, task * >    write_event_cache_;
-            task_time_t                     nearest_timeout_;
+            task_time_t             nearest_timeout_;
 
             // Internal task switcher
             void __switch_task( task* ptask );
@@ -210,10 +200,12 @@ namespace pe {
 
             // Tell if current loop is running
             bool is_running() const;
+
+            // This Loop
+            static __thread__attr loop    main;
         };
 
-        // Get current thread's run loop
-        extern thread_local loop this_loop;
+        #define this_loop       loop::main
         
         // Dump the debug info of a task
         void task_debug_info( task* ptask, FILE *fp = stdout, int lv = 0);

@@ -19,7 +19,6 @@ libpeco_la_SOURCES = \
 	PEUtils/peco/src/gzip.cpp \
 	PEUtils/peco/src/filemgr.cpp \
 	PECoTask/peco/src/loop.cpp \
-	PECoTask/peco/src/mempage.cpp \
 	PECoTask/peco/src/taskadapter.cpp \
 	PECoTask/peco/src/process.cpp \
 	PECoTask/peco/src/condition.cpp \
@@ -72,11 +71,9 @@ pecotaskSub_HEADERS = \
 	PECoTask/peco/cotask/loop.h \
 	PECoTask/peco/cotask/process.h \
 	PECoTask/peco/cotask/eventqueue.h \
-	PECoTask/peco/cotask/memblock.hpp \
 	PECoTask/peco/cotask/taskadapter.h \
 	PECoTask/peco/cotask/cotask.hpp \
-	PECoTask/peco/cotask/kevent_wrapper.h \
-	PECoTask/peco/cotask/mempage.h
+	PECoTask/peco/cotask/kevent_wrapper.h
 peconetutilsSub_HEADERS = \
 	PECoNet/peco/conet/utils/basic.h \
 	PECoNet/peco/conet/utils/obj.h \

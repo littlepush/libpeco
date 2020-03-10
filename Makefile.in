@@ -146,9 +146,8 @@ am_libpeco_la_OBJECTS = PEUtils/peco/src/stringutil.lo \
 	PEUtils/peco/src/hex_dump.lo PEUtils/peco/src/argparser.lo \
 	PEUtils/peco/src/jsoncpp.lo PEUtils/peco/src/sysinfo.lo \
 	PEUtils/peco/src/gzip.lo PEUtils/peco/src/filemgr.lo \
-	PECoTask/peco/src/loop.lo PECoTask/peco/src/mempage.lo \
-	PECoTask/peco/src/taskadapter.lo PECoTask/peco/src/process.lo \
-	PECoTask/peco/src/condition.lo \
+	PECoTask/peco/src/loop.lo PECoTask/peco/src/taskadapter.lo \
+	PECoTask/peco/src/process.lo PECoTask/peco/src/condition.lo \
 	PECoNet/peco/conet/utils/basic.lo \
 	PECoNet/peco/conet/utils/obj.lo \
 	PECoNet/peco/conet/utils/rawf.lo \
@@ -200,7 +199,6 @@ am__depfiles_remade =  \
 	PECoRLog/peco/$(DEPDIR)/corlog.Plo \
 	PECoTask/peco/src/$(DEPDIR)/condition.Plo \
 	PECoTask/peco/src/$(DEPDIR)/loop.Plo \
-	PECoTask/peco/src/$(DEPDIR)/mempage.Plo \
 	PECoTask/peco/src/$(DEPDIR)/process.Plo \
 	PECoTask/peco/src/$(DEPDIR)/task_test1.Po \
 	PECoTask/peco/src/$(DEPDIR)/taskadapter.Plo \
@@ -429,7 +427,6 @@ libpeco_la_SOURCES = \
 	PEUtils/peco/src/gzip.cpp \
 	PEUtils/peco/src/filemgr.cpp \
 	PECoTask/peco/src/loop.cpp \
-	PECoTask/peco/src/mempage.cpp \
 	PECoTask/peco/src/taskadapter.cpp \
 	PECoTask/peco/src/process.cpp \
 	PECoTask/peco/src/condition.cpp \
@@ -482,11 +479,9 @@ pecotaskSub_HEADERS = \
 	PECoTask/peco/cotask/loop.h \
 	PECoTask/peco/cotask/process.h \
 	PECoTask/peco/cotask/eventqueue.h \
-	PECoTask/peco/cotask/memblock.hpp \
 	PECoTask/peco/cotask/taskadapter.h \
 	PECoTask/peco/cotask/cotask.hpp \
-	PECoTask/peco/cotask/kevent_wrapper.h \
-	PECoTask/peco/cotask/mempage.h
+	PECoTask/peco/cotask/kevent_wrapper.h
 
 peconetutilsSub_HEADERS = \
 	PECoNet/peco/conet/utils/basic.h \
@@ -660,8 +655,6 @@ PECoTask/peco/src/$(DEPDIR)/$(am__dirstamp):
 	@: > PECoTask/peco/src/$(DEPDIR)/$(am__dirstamp)
 PECoTask/peco/src/loop.lo: PECoTask/peco/src/$(am__dirstamp) \
 	PECoTask/peco/src/$(DEPDIR)/$(am__dirstamp)
-PECoTask/peco/src/mempage.lo: PECoTask/peco/src/$(am__dirstamp) \
-	PECoTask/peco/src/$(DEPDIR)/$(am__dirstamp)
 PECoTask/peco/src/taskadapter.lo: PECoTask/peco/src/$(am__dirstamp) \
 	PECoTask/peco/src/$(DEPDIR)/$(am__dirstamp)
 PECoTask/peco/src/process.lo: PECoTask/peco/src/$(am__dirstamp) \
@@ -774,7 +767,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@PECoRLog/peco/$(DEPDIR)/corlog.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@PECoTask/peco/src/$(DEPDIR)/condition.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@PECoTask/peco/src/$(DEPDIR)/loop.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@PECoTask/peco/src/$(DEPDIR)/mempage.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@PECoTask/peco/src/$(DEPDIR)/process.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@PECoTask/peco/src/$(DEPDIR)/task_test1.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@PECoTask/peco/src/$(DEPDIR)/taskadapter.Plo@am__quote@ # am--include-marker
@@ -1255,7 +1247,6 @@ distclean: distclean-am
 	-rm -f PECoRLog/peco/$(DEPDIR)/corlog.Plo
 	-rm -f PECoTask/peco/src/$(DEPDIR)/condition.Plo
 	-rm -f PECoTask/peco/src/$(DEPDIR)/loop.Plo
-	-rm -f PECoTask/peco/src/$(DEPDIR)/mempage.Plo
 	-rm -f PECoTask/peco/src/$(DEPDIR)/process.Plo
 	-rm -f PECoTask/peco/src/$(DEPDIR)/task_test1.Po
 	-rm -f PECoTask/peco/src/$(DEPDIR)/taskadapter.Plo
@@ -1330,7 +1321,6 @@ maintainer-clean: maintainer-clean-am
 	-rm -f PECoRLog/peco/$(DEPDIR)/corlog.Plo
 	-rm -f PECoTask/peco/src/$(DEPDIR)/condition.Plo
 	-rm -f PECoTask/peco/src/$(DEPDIR)/loop.Plo
-	-rm -f PECoTask/peco/src/$(DEPDIR)/mempage.Plo
 	-rm -f PECoTask/peco/src/$(DEPDIR)/process.Plo
 	-rm -f PECoTask/peco/src/$(DEPDIR)/task_test1.Po
 	-rm -f PECoTask/peco/src/$(DEPDIR)/taskadapter.Plo

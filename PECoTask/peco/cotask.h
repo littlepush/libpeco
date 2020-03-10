@@ -14,8 +14,6 @@
 
 #include <peco/cotask/cotask.hpp>
 #include <peco/cotask/loop.h>
-#include <peco/cotask/memblock.hpp>
-#include <peco/cotask/mempage.h>
 #include <peco/cotask/taskadapter.h>
 #include <peco/cotask/process.h>
 #include <peco/cotask/condition.h>
