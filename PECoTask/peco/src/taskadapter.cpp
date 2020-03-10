@@ -17,7 +17,7 @@ namespace pe {
             ta->sem = _psem.get();
 
             ON_DEBUG_COTASK(
-                std::cout << "in __stepqueue for task @" << _tt->id << std::endl;
+                std::cout << "in __stepqueue for task @" << this_task::get_id() << std::endl;
             )
 
             // 
@@ -29,7 +29,7 @@ namespace pe {
                 // Continue to do, ignore the flag
                 while ( ta->job_q.size() > 0 ) {
                     ON_DEBUG_COTASK(
-                        std::cout << "do step in task @" << _tt->id << std::endl;
+                        std::cout << "do step in task @" << this_task::get_id() << std::endl;
                     )
                     task_job_t _j = ta->job_q.front();
                     ta->job_q.pop();
@@ -43,7 +43,8 @@ namespace pe {
             } while ( _psem->fetch() );
 
             ON_DEBUG_COTASK(
-                std::cout << "stop step queue for taskadapter bind with @" << _tt->id << std::endl;
+                std::cout << "stop step queue for taskadapter bind with @" << 
+                    this_task::get_id() << std::endl;
             )
         }
 

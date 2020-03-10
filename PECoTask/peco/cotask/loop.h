@@ -121,9 +121,6 @@ namespace pe {
 			int 					core_fd_;
 			core_event_t 			*core_events_;
 
-			// Temp storage of current running task
-			pe::co::task 			*running_task_;
-
             // Task counter
             uint64_t                task_count_;
 
