@@ -135,7 +135,6 @@ namespace pe {
         __thread_attr full_task_t * ATTR_VOLATILE       __running_task = NULL;
         // All event-based tasks
         __thread_attr full_task_t * ATTR_VOLATILE       __timed_task_root = NULL;
-        __thread_attr full_task_t * ATTR_VOLATILE       __timed_task_tail = NULL;
         __thread_attr full_task_t * ATTR_VOLATILE       __read_task_root = NULL;
         __thread_attr full_task_t * ATTR_VOLATILE       __write_task_root = NULL;
 
@@ -455,15 +454,24 @@ namespace pe {
 
         // Insert Task to the timed list
         void __insert_task( full_task_t * ptask ) {
-            // Set the next action to be null
             ptask->next_action_task = NULL;
             if ( __timed_task_root == NULL ) {
                 __timed_task_root = ptask;
+                return;
             }
-            if ( __timed_task_tail != NULL ) {
-                __timed_task_tail->next_action_task = ptask;
+            full_task_t *_prev_task = NULL;
+            full_task_t *_cur_task = __timed_task_root;
+            while ( _cur_task->next_action_task != NULL ) {
+                if ( _cur_task->next_time > ptask->next_time ) break;
+                _prev_task = _cur_task;
+                _cur_task = _cur_task->next_action_task;
             }
-            __timed_task_tail = ptask;
+            ptask->next_action_task = _cur_task;
+            if ( _prev_task == NULL ) {
+                __timed_task_root = ptask;
+            } else {
+                _prev_task->next_action_task = ptask;
+            }
             ON_DEBUG_COTASK(
                 std::cout << "after insert timed task: " << ptask->id << 
                     ", now order is: ";
@@ -532,10 +540,6 @@ namespace pe {
                         __timed_task_root = _cur_task->next_action_task;
                     } else {
                         _prev_task->next_action_task = _cur_task->next_action_task;
-                    }
-                    // Check if match task is tail
-                    if ( __timed_task_tail == _cur_task ) {
-                        __timed_task_tail = _prev_task;
                     }
                     break;
                 }
