@@ -7,9 +7,9 @@ int g_test = 0;
 
 int main( int argc, char* argv[] ) {
 
-    // ON_DEBUG(
-    //     pe::co::enable_cotask_trace();
-    // )
+    ON_DEBUG(
+        pe::co::enable_cotask_trace();
+    )
 
     this_loop.do_job([]() {
 

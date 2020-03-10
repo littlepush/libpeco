@@ -8,7 +8,6 @@
 */
 
 #include <peco/cotask/loop.h>
-#include <signal.h>
 
 // For old libpeco version, forct to use ucontext
 #if defined(__LIBPECO_USE_GNU__) && (LIBPECO_STANDARD_VERSION < 0x00020001)
@@ -36,13 +35,12 @@
 #endif
 
 #ifdef FORCE_USE_UCONTEXT
-#ifdef __APPLE__
-#include <sys/ucontext.h>
-#endif
 #include <ucontext.h>
 #else
 #include <setjmp.h>
 #endif
+
+#include <signal.h>
 
 #ifdef __APPLE__
 #include <peco/cotask/kevent_wrapper.h>
@@ -59,7 +57,7 @@
 #endif
 
 #ifndef TASK_STACK_SIZE
-#define TASK_STACK_SIZE     524288UL    // 512KB
+#define TASK_STACK_SIZE     524288      // 512KB
 #endif
 
 
@@ -69,13 +67,17 @@ extern "C" {
 namespace pe {
     namespace co {
 
+        #ifndef ATTR_VOLATILE
+        #define ATTR_VOLATILE   volatile
+        #endif
+
         struct full_task_t : public task {
             // Is event id
             bool                is_event_id;
             // The stack for the job
-            stack_ptr           stack;
+            ATTR_VOLATILE stack_ptr     stack;
             // The real running job's point
-            task_job_t*         pjob;
+            task_job_t* ATTR_VOLATILE   pjob;
 
             // Status of the task
             task_status         status;
@@ -96,19 +98,19 @@ namespace pe {
             repeat_t            repeat_count;
 
             // Parent task
-            full_task_t*               p_task;
+            full_task_t* ATTR_VOLATILE p_task;
             // Child task list head
             full_task_t*               c_task;
             // Task list
             full_task_t*               prev_task;
             full_task_t*               next_task;
-            full_task_t*               next_action_task;
+            full_task_t* ATTR_VOLATILE next_action_task;
 
             // Tick
             task_time_t         lt_time;
 
             // On Task Destory
-            task_job_t*         exitjob;
+            task_job_t* ATTR_VOLATILE  exitjob;
 
         #ifdef FORCE_USE_UCONTEXT
             // Context for the job
@@ -125,12 +127,11 @@ namespace pe {
         #endif
         };
 
-        #ifndef ATTR_VOLATILE
-        #define ATTR_VOLATILE   volatile
-        #endif
+        // The main loop
+        __thread_attr loop                  loop::main;
 
         // The thread local loop point
-        __thread_attr loop *                            __this_loop = NULL;
+        __thread_attr loop *                            __this_loop = &loop::main;
         __thread_attr full_task_t * ATTR_VOLATILE       __running_task = NULL;
         // All event-based tasks
         __thread_attr full_task_t * ATTR_VOLATILE       __timed_task_root = NULL;
@@ -143,10 +144,9 @@ namespace pe {
         #else
         typedef jmp_buf                     context_type_t;
         #endif
-        ATTR_VOLATILE __thread_attr context_type_t*       __main_context;
-
-        // The main loop
-        __thread_attr loop                  loop::main;
+        __thread_attr context_type_t        __main_context;
+        #define R_MAIN_CTX                  (__main_context)
+        #define P_MAIN_CTX                  ((context_type_t *)&__main_context)
 
         ON_DEBUG(
             bool g_cotask_trace_flag = false;
@@ -159,23 +159,22 @@ namespace pe {
         )
 
         // Dump Stack Info
-        void __dump_call_stack( FILE* fd ) {
+        void __dump_call_stack( FILE* fd, int lv = 0 ) {
         #if defined(PECO_SIGNAL_STACK) || defined(FORCE_USE_UCONTEXT)
             intptr_t _stack[64];
             size_t _ssize = backtrace((void **)_stack, 64);
-            fprintf(fd, "fetch callstack: %u\n", (uint32_t)_ssize);
             #ifdef __APPLE__
             char **_stackstrs = backtrace_symbols((void **)_stack, _ssize);
             char* _symbol = (char *)malloc(sizeof(char) * 1024);
             char* _module = (char *)malloc(sizeof(char) * 1024);
             int _offset = 0;
             char* _addr = (char *)malloc(sizeof(char) * 48);
-            for ( size_t i = 0; i < _ssize; ++i ) {
+            for ( size_t i = 2; i < _ssize; ++i ) {
                 sscanf(_stackstrs[i], "%*s %s %s %s %*s %d", 
                     _module, _addr, _symbol, &_offset);
                 int _valid_cxx_name = 0;
                 char * _func = abi::__cxa_demangle(_symbol, NULL, 0, &_valid_cxx_name);
-                fprintf(fd, "(%s)\t0x%s - %s + %d\n", 
+                fprintf(fd, "%*s(%s) 0x%s - %s + %d\n", lv * 4, "",
                     _module, _addr, _func, _offset);
                 if ( _func ) free(_func);
             }
@@ -191,7 +190,7 @@ namespace pe {
         typedef void (*context_job_t)(void);
 		// Run job wrapper
         #ifdef FORCE_USE_UCONTEXT
-        inline void __job_run( task_job_t* job )
+        inline void __job_run( void )
         #else
         #ifdef PECO_SIGNAL_STACK
         inline void __job_run( int sig )
@@ -200,6 +199,14 @@ namespace pe {
         #endif
         #endif
         {
+            ON_DEBUG_COTASK(
+                std::cout << "in task job: " << std::endl;
+        #if defined(FORCE_USE_UCONTEXT) || defined(PECO_SIGNAL_STACK)
+                task_debug_info(__running_task, stderr);
+        #else
+                task_debug_info((task *)ptask, stderr);            
+        #endif
+            )
         #ifndef FORCE_USE_UCONTEXT
             #ifdef PECO_SIGNAL_STACK
             auto job = __running_task->pjob;
@@ -215,7 +222,8 @@ namespace pe {
                 return NULL;
             }
             #endif
-
+        #else
+            auto job = __running_task->pjob;
         #endif
             try {
                 (*job)(); 
@@ -254,7 +262,7 @@ namespace pe {
             #ifndef FORCE_USE_UCONTEXT
             __running_task->status = task_status_stopped;
             // Long Jump back to the main context
-            longjmp( *(jmp_buf *)__main_context, 1 );
+            longjmp( R_MAIN_CTX, 1 );
 
             #ifndef PECO_SIGNAL_STACK
             return NULL;
@@ -283,8 +291,13 @@ namespace pe {
             _ptask->ctx.uc_stack.ss_sp = _ptask->stack;
             _ptask->ctx.uc_stack.ss_size = TASK_STACK_SIZE;
             _ptask->ctx.uc_stack.ss_flags = 0;
-            _ptask->ctx.uc_link = (context_type_t *)__main_context;
-            makecontext(&(_ptask->ctx), (context_job_t)&__job_run, 1, _ptask->pjob);
+            _ptask->ctx.uc_link = P_MAIN_CTX;
+            errno = 0;
+            makecontext(&(_ptask->ctx), (context_job_t)&__job_run, 0);
+            if ( errno != 0 ) {
+                std::cerr << "makecontext failed: " << errno << ", "
+                    << strerror(errno) << std::endl;
+            }
 
             #else
 
@@ -347,11 +360,11 @@ namespace pe {
                 std::cout << "X " << __running_task->id << " => main" << std::endl;
             )
             #ifdef FORCE_USE_UCONTEXT
-            swapcontext(&(__running_task->ctx), (context_type_t *)__main_context);
+            swapcontext(&(__running_task->ctx), P_MAIN_CTX);
             // setcontext(&main_ctx_);
             #else
             if ( !setjmp(((full_task_t *)__running_task)->buf) ) {
-                longjmp(*(jmp_buf *)__main_context, 1);
+                longjmp(R_MAIN_CTX, 1);
             }
             #endif
         }
@@ -361,10 +374,10 @@ namespace pe {
             ptask->ctx.uc_stack.ss_sp = ptask->stack;
             ptask->ctx.uc_stack.ss_size = TASK_STACK_SIZE;
             ptask->ctx.uc_stack.ss_flags = 0;
-            ptask->ctx.uc_link = (context_type_t *)__main_context;
+            ptask->ctx.uc_link = P_MAIN_CTX;
 
             // Save the job on heap
-            makecontext(&(ptask->ctx), (context_job_t)&__job_run, 1, ptask->pjob);
+            makecontext(&(ptask->ctx), (context_job_t)&__job_run,0);
         #else
 
         #ifdef PECO_SIGNAL_STACK
@@ -373,14 +386,14 @@ namespace pe {
             ptask->task_stack.ss_flags = 0;
         #else
             // Create another stack
-            // pthread_attr_destroy(&ptask->task_attr);
-            // pthread_attr_init(&ptask->task_attr);
-            // pthread_attr_setstack(&ptask->task_attr, 
-            //     ptask->stack, TASK_STACK_SIZE);
         #endif
             // make this task looks like a new one
             ptask->status = task_status_pending;
         #endif
+            ON_DEBUG_COTASK(
+                std::cout << "after reset task: " << std::endl;
+                task_debug_info(ptask, stderr);
+            )
         }
 
         full_task_t* __create_task_with_fd( int fd, task_job_t job ) {
@@ -391,8 +404,10 @@ namespace pe {
         }
 
         void __destory_task( full_task_t * ptask ) {
-            std::cerr << "destroying task: " << std::endl;
-            task_debug_info(ptask, stderr);
+            ON_DEBUG_COTASK(
+                std::cerr << "destroying task: " << std::endl;
+                task_debug_info(ptask, stderr);
+            )
             if ( ptask->exitjob ) {
                 (*ptask->exitjob)();
                 delete ptask->exitjob;
@@ -449,6 +464,19 @@ namespace pe {
                 __timed_task_tail->next_action_task = ptask;
             }
             __timed_task_tail = ptask;
+            ON_DEBUG_COTASK(
+                std::cout << "after insert timed task: " << ptask->id << 
+                    ", now order is: ";
+                full_task_t *_t = __timed_task_root;
+                while ( _t != NULL ) {
+                    std::cout << _t->id;
+                    if ( _t->next_action_task != NULL ) {
+                        std::cout << ", ";
+                    }
+                    _t = _t->next_action_task;
+                }
+                std::cout << std::endl;
+            )
         }
 
         void __sort_insert_read_task( full_task_t * ptask ) {
@@ -498,7 +526,7 @@ namespace pe {
             if ( _cur_task == NULL ) return;
             full_task_t *_prev_task = NULL;
             do {
-                if ( _cur_task->id == ptask->id ) {
+                if ( _cur_task == ptask ) {
                     if ( _prev_task == NULL ) {
                         // This is root
                         __timed_task_root = _cur_task->next_action_task;
@@ -516,6 +544,19 @@ namespace pe {
                 _cur_task = _cur_task->next_action_task;
             } while ( _cur_task != NULL );
             ptask->next_action_task = NULL;
+            ON_DEBUG_COTASK(
+                std::cout << "after remove task: " << ptask->id << 
+                    ", now order is: ";
+                full_task_t *_t = __timed_task_root;
+                while ( _t != NULL ) {
+                    std::cout << _t->id;
+                    if ( _t->next_action_task != NULL ) {
+                        std::cout << ", ";
+                    }
+                    _t = _t->next_action_task;
+                }
+                std::cout << std::endl;
+            )
         }
 
         void __remove_read_task( full_task_t * ptask ) {
@@ -523,7 +564,7 @@ namespace pe {
             if ( _cur_task == NULL ) return;
             full_task_t *_prev_task = NULL;
             do {
-                if ( _cur_task->id == ptask->id ) {
+                if ( _cur_task == ptask ) {
                     if ( _prev_task == NULL ) {
                         __read_task_root = _cur_task->next_action_task;
                     } else {
@@ -542,7 +583,7 @@ namespace pe {
             if ( _cur_task == NULL ) return;
             full_task_t *_prev_task = NULL;
             do {
-                if ( _cur_task->id == ptask->id ) {
+                if ( _cur_task == ptask ) {
                     if ( _prev_task == NULL ) {
                         __write_task_root = _cur_task->next_action_task;
                     } else {
@@ -565,11 +606,11 @@ namespace pe {
                 ptask->status = task_status_running;
             }
 
-            __running_task = ptask;
-
             ON_DEBUG_COTASK(
                 std::cout << CLI_BLUE << "X main => " << ptask->id << CLI_NOR << std::endl;
             )
+            __running_task = ptask;
+
             #ifdef FORCE_USE_UCONTEXT
             // If the task finishs and quit, then will continue
             // the main loop because we set uc_link as the main ctx
@@ -577,7 +618,7 @@ namespace pe {
             // otherwise, the yield function will change the
             // next_time of the task and insert it back to
             // the task cache.
-            swapcontext((context_type_t *)__main_context, &(ptask->ctx));
+            swapcontext(P_MAIN_CTX, &(ptask->ctx));
             #else
 
             #ifdef PECO_SIGNAL_STACK
@@ -608,7 +649,7 @@ namespace pe {
             #endif
             // Save current main jmp's position and jump to the 
             // task stack
-            if ( !setjmp(*(jmp_buf *)__main_context) ) {
+            if ( !setjmp(R_MAIN_CTX) ) {
                 longjmp(ptask->buf, 1);
             }
 
@@ -683,16 +724,9 @@ namespace pe {
             task_count_(0), 
             running_(false), ret_code_(0) 
         { 
-            if ( __this_loop != NULL ) {
+            if ( __this_loop != this ) {
                 throw std::runtime_error("cannot create more than one loop in one thread");
             }
-
-            __this_loop = this;
-            __running_task = NULL;
-            // __task_cache = new std::map< task_time_t, task * >;
-            // __read_event_cache = new std::map< intptr_t, task * >;
-            // __write_event_cache = new std::map< intptr_t, task * >;
-            __main_context = (context_type_t *)malloc(sizeof(context_type_t));
 
             #ifndef FORCE_USE_UCONTEXT
 
@@ -734,9 +768,6 @@ namespace pe {
                 --task_count_;
             }
 
-            free((void *)__main_context);
-            __main_context = NULL;
-
             if ( core_fd_ == -1 ) return;
             ::close(core_fd_);
             free(core_events_);
@@ -755,6 +786,11 @@ namespace pe {
             ++task_count_;
             _ptask->repeat_count = oneshot_task;
             _ptask->next_time = std::chrono::high_resolution_clock::now();
+
+            ON_DEBUG_COTASK(
+                std::cout << "create a job: " << std::endl;
+                task_debug_info(_ptask, stderr);
+            )
             __insert_task(_ptask);
 
             // Switch to main and run the task
@@ -768,6 +804,11 @@ namespace pe {
             ++task_count_;
             _ptask->repeat_count = oneshot_task;
             _ptask->next_time = std::chrono::high_resolution_clock::now();
+
+            ON_DEBUG_COTASK(
+                std::cout << "create a job: " << std::endl;
+                task_debug_info(_ptask, stderr);
+            )
             __insert_task(_ptask);
 
             // Switch
@@ -781,6 +822,10 @@ namespace pe {
             _ptask->repeat_count = infinitive_task;
             _ptask->next_time = std::chrono::high_resolution_clock::now();
             _ptask->duration = interval;
+            ON_DEBUG_COTASK(
+                std::cout << "create a job: " << std::endl;
+                task_debug_info(_ptask, stderr);
+            )
             __insert_task(_ptask);
 
             // Switch
@@ -793,6 +838,10 @@ namespace pe {
             ++task_count_;
             _ptask->repeat_count = oneshot_task;
             _ptask->next_time = std::chrono::high_resolution_clock::now() + delay;
+            ON_DEBUG_COTASK(
+                std::cout << "create a job: " << std::endl;
+                task_debug_info(_ptask, stderr);
+            )
             __insert_task(_ptask);
 
             // Switch
@@ -901,9 +950,9 @@ namespace pe {
                 __write_task_root == NULL
             ) return;
 
-            uint32_t _wait_time = 1000; // default 1000ms
+            uint32_t _wait_time = 0;
             auto _now = task_time_now();
-            auto _nearest = _now + std::chrono::milliseconds(_wait_time);
+            auto _nearest = _now;
 
             ON_DEBUG_COTASK(
                 std::cout << CLI_COFFEE << "@ __event_task_schedule@" << 
@@ -1115,10 +1164,13 @@ namespace pe {
         }
 
         void task_debug_info( task* ptask, FILE *fp, int lv ) {
-            __dump_call_stack(fp);
+
+            __dump_call_stack(fp, lv);
 
             if ( ptask == NULL ) {
                 fprintf(fp, "%*s|= <null>\n", lv * 4, ""); return;
+            } else {
+                fprintf(fp, "%*s>>%s<<\n", lv * 4, "", utils::ptr_str(ptask).c_str() );
             }
 
             full_task_t *_ptask = (full_task_t *)ptask;
@@ -1126,6 +1178,9 @@ namespace pe {
             fprintf(fp, "%*s|= id: %ld\n", lv * 4, "", _ptask->id);
             fprintf(fp, "%*s|= is_event: %s\n", lv * 4, "", (_ptask->is_event_id ? "true" : "false"));
             fprintf(fp, "%*s|= stack: %s\n", lv * 4, "", pe::utils::ptr_str(_ptask->stack).c_str());
+            utils::hex_dump _hd((const char *)_ptask->stack, 32);
+            fprintf(fp, "%*s|= ->%s\n", lv * 4, "", _hd.line(0));
+            fprintf(fp, "%*s|= ->%s\n", lv * 4, "", _hd.line(1));
             fprintf(fp, "%*s|= status: %s\n", lv * 4, "", 
                 (_ptask->status == task_status_pending ? "pending" : 
                     (_ptask->status == task_status_paused ? "paused" : 
@@ -1141,6 +1196,8 @@ namespace pe {
                 fprintf(fp, "%*s|= repeat_count: %lu\n", lv * 4, "", _ptask->repeat_count);
             }
             fprintf(fp, "%*s|= flags: %x\n", lv * 4, "", *(uint8_t *)&_ptask->reserved_flags);
+            fprintf(fp, "%*s|= exitjob: %s\n", lv * 4, "", utils::ptr_str(_ptask->exitjob).c_str());
+
             if ( _ptask->p_task != NULL ) {
                 fprintf(fp, "%*s|= parent: \n", lv * 4, "");
                 task_debug_info( _ptask->p_task, fp, lv + 1 );
