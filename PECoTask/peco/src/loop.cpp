@@ -42,7 +42,12 @@
 #endif
 
 #ifndef TASK_STACK_SIZE
-#define TASK_STACK_SIZE     524288      // 512KB
+// Because some lib we use, we may need at least 1mb stack
+#define TASK_STACK_SIZE     1048576      // 1MB
+#endif
+
+#ifndef SIZE_16K
+#define SIZE_16K            16384
 #endif
 
 #include <peco/peutils.h>
@@ -172,7 +177,7 @@ namespace pe {
             // Init the context
             getcontext(&_ptask->ctx);
             _ptask->ctx.uc_stack.ss_sp = _ptask->stack;
-            _ptask->ctx.uc_stack.ss_size = TASK_STACK_SIZE;
+            _ptask->ctx.uc_stack.ss_size = TASK_STACK_SIZE - SIZE_16K;
             _ptask->ctx.uc_stack.ss_flags = 0;
             _ptask->ctx.uc_link = P_MAIN_CTX;
 
@@ -182,13 +187,13 @@ namespace pe {
             #ifdef PECO_USE_SIGUSR1
 
             _ptask->task_stack.ss_flags = 0;
-            _ptask->task_stack.ss_size = TASK_STACK_SIZE;
+            _ptask->task_stack.ss_size = TASK_STACK_SIZE - SIZE_16K;
             _ptask->task_stack.ss_sp = _ptask->stack;
 
             #else
 
             pthread_attr_init(&_ptask->task_attr);
-            pthread_attr_setstack(&_ptask->task_attr, _ptask->stack, TASK_STACK_SIZE);
+            pthread_attr_setstack(&_ptask->task_attr, _ptask->stack, TASK_STACK_SIZE - SIZE_16K);
 
             #endif
 
@@ -242,7 +247,7 @@ namespace pe {
         #ifdef PECO_USE_UCONTEXT
             getcontext(&ptask->ctx);
             ptask->ctx.uc_stack.ss_sp = ptask->stack;
-            ptask->ctx.uc_stack.ss_size = TASK_STACK_SIZE;
+            ptask->ctx.uc_stack.ss_size = TASK_STACK_SIZE - SIZE_16K;
             ptask->ctx.uc_stack.ss_flags = 0;
             ptask->ctx.uc_link = P_MAIN_CTX;
 
@@ -843,7 +848,7 @@ namespace pe {
             sa.sa_flags = SA_ONSTACK;
             sigemptyset(&sa.sa_mask);
             sigaction(SIGUSR1, &sa, NULL);
-            
+
             #endif
 
             core_fd_create(__core_fd);
