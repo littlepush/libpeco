@@ -80,6 +80,9 @@ namespace pe {
             }
         )
 
+        // Dump Task Info
+        void __task_debug_info( task * task, FILE* fp = stdout, int lv = 0 );
+
         typedef void (*context_job_t)(void);
 		// Run job wrapper
         void __job_run( task_job_t* job ) { 
@@ -87,22 +90,22 @@ namespace pe {
                 (*job)(); 
             } catch( const char * msg ) {
                 std::cerr << "exception: " << msg << ", task info: " << std::endl;
-                task_debug_info( __running_task, stderr );
+                __task_debug_info( __running_task, stderr );
             } catch( std::string& msg ) {
                 std::cerr << "exception: " << msg << ", task info: " << std::endl;
-                task_debug_info( __running_task, stderr );
+                __task_debug_info( __running_task, stderr );
             } catch( std::stringstream& msg ) {
                 std::cerr << "exception: " << msg.str() << ", task info: " << std::endl;
-                task_debug_info( __running_task, stderr );
+                __task_debug_info( __running_task, stderr );
             } catch ( std::logic_error& ex ) {
                 std::cerr << "logic error: " << ex.what() << ", task info: " << std::endl;
-                task_debug_info( __running_task, stderr );
+                __task_debug_info( __running_task, stderr );
             } catch ( std::runtime_error& ex ) {
                 std::cerr << "runtime error: " << ex.what() << ", task info: " << std::endl;
-                task_debug_info( __running_task, stderr );
+                __task_debug_info( __running_task, stderr );
             } catch ( std::bad_exception& ex ) {
                 std::cerr << "bad exception: " << ex.what() << ", task info: " << std::endl;
-                task_debug_info( __running_task, stderr );
+                __task_debug_info( __running_task, stderr );
             } catch( ... ) {
                 std::exception_ptr _ep = std::current_exception();
                 if ( _ep ) {
@@ -115,7 +118,7 @@ namespace pe {
                     std::cerr << "unknow exception caught";
                 }
                 std::cerr << ", task info: " << std::endl;
-                task_debug_info( __running_task, stderr );
+                __task_debug_info( __running_task, stderr );
             }
         }
 
@@ -775,7 +778,7 @@ namespace pe {
             ret_code_ = code; running_ = false; this_task::yield();
         }
 
-        void task_debug_info( task* ptask, FILE *fp, int lv ) {
+        void __task_debug_info( task * ptask, FILE *fp, int lv ) {
             if ( ptask == NULL ) {
                 fprintf(fp, "%*s|= <null>\n", lv * 4, ""); return;
             } else {
@@ -805,12 +808,16 @@ namespace pe {
 
             if ( ptask->p_task != NULL ) {
                 fprintf(fp, "%*s|= parent: \n", lv * 4, "");
-                task_debug_info( ptask->p_task, fp, lv + 1 );
+                __task_debug_info( ptask->p_task, fp, lv + 1 );
             } else {
                 void * _stack[64];
                 size_t _ssize = backtrace(_stack, 64);
                 backtrace_symbols_fd(_stack, _ssize, fileno(fp));
             }
+        }
+
+        void task_debug_info( task_t ptask, FILE *fp, int lv ) {
+            __task_debug_info( (task *)ptask, fp, lv );
         }
 
         // Cancel all bounded task of given fd
@@ -1268,8 +1275,10 @@ namespace pe {
     }
 }
 
+#ifdef PECO_USE_UCONTEXT
 #ifdef __APPLE__
 #pragma clang diagnostic pop
+#endif
 #endif
 
 // Push Chen
