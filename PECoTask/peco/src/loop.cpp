@@ -350,8 +350,7 @@ namespace pe {
             do {                                                    \
             ptask->next_##__KEY__##_task = NULL;                    \
             if ( __ROOT__ == NULL ) { __ROOT__ = ptask;             \
-                __##__KEY__##_task_count += 1;                      \
-                ++ptask->refcount; break; }                         \
+                __##__KEY__##_task_count += 1; break; }             \
             task *_prev_task = NULL, *_cur_task = __ROOT__;         \
             while ( _cur_task != NULL ) {                           \
                 if ( _cur_task->__ATTR__ > ptask->__ATTR__) break;  \
@@ -361,8 +360,8 @@ namespace pe {
             if ( _prev_task == NULL ) { __ROOT__ = ptask; }         \
             else { _prev_task->next_##__KEY__##_task = ptask; }     \
             __##__KEY__##_task_count += 1;                          \
-            ++ptask->refcount;                                      \
             } while ( false );                                      \
+            ++ptask->refcount;                                      \
             ON_DEBUG_COTASK(                                        \
                 std::cout << "after insert "#__KEY__" task: " <<    \
                     ptask->id << ", list contains: " <<             \
@@ -387,13 +386,13 @@ namespace pe {
                     } else {                                        \
                         _prev_task->next_##__KEY__##_task =         \
                             _cur_task->next_##__KEY__##_task; }     \
+                    --ptask->refcount;                              \
+                    __##__KEY__##_task_count -= 1;                  \
                     break; }                                        \
                 _prev_task = _cur_task;                             \
                 _cur_task = _cur_task->next_##__KEY__##_task; }     \
             while( _cur_task != NULL );                             \
             ptask->next_##__KEY__##_task = NULL;                    \
-            --ptask->refcount;                                      \
-            __##__KEY__##_task_count -= 1;                          \
             } while ( false );                                      \
             ON_DEBUG_COTASK(                                        \
                 std::cout << "after remove "#__KEY__" task: " <<    \
