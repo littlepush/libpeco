@@ -9,10 +9,16 @@
 
 // For old libpeco version, forct to use ucontext
 #if (LIBPECO_STANDARD_VERSION < 0x00020001)
-#define PECO_USE_UCONTEXT 1
+#define PECO_USE_UCONTEXT   1
 // When enabled ucontext and we are using gnu lib, can use ucontext
 #elif defined(ENABLE_UCONTEXT) && (ENABLE_UCONTEXT == 1)
-#define PECO_USE_UCONTEXT 1
+#define PECO_USE_UCONTEXT   1
+#endif
+
+#ifndef PECO_USE_UCONTEXT
+#if defined(DISABLE_THREAD_STACK) && (DISABLE_THREAD_STACK == 1)
+#define PECO_USE_SIGUSR1    1
+#endif
 #endif
 
 #ifdef PECO_USE_UCONTEXT
@@ -42,6 +48,10 @@
 #include <peco/peutils.h>
 #include <execinfo.h>
 
+#ifndef PECO_USE_UCONTEXT
+#include <setjmp.h>
+#endif
+
 extern "C" {
     int PECoTask_Autoconf() { return 0; }
 }
@@ -50,7 +60,9 @@ namespace pe {
         // The main loop
         __thread_attr loop loop::main;
         #ifdef PECO_USE_UCONTEXT
-        __thread_attr ucontext_t  __main_context;
+        __thread_attr ucontext_t    __main_context;
+        #else
+        __thread_attr jmp_buf       __main_context;
         #endif
         #define R_MAIN_CTX          (__main_context)
         #define P_MAIN_CTX          (&__main_context)
@@ -85,7 +97,19 @@ namespace pe {
 
         typedef void (*context_job_t)(void);
 		// Run job wrapper
+#ifdef PECO_USE_UCONTEXT
         void __job_run( task_job_t* job ) { 
+#else
+    #ifdef PECO_USE_SIGUSR1
+        void __job_run( int sig ) {
+            job = __running_task->pjob;
+            if ( 0 == setjmp(__running_task->ctx) ) return;
+    #else
+        void *__job_run( void* ptask ) {
+            job = (task *)ptask->pjob;
+            if ( 0 == setjmp(((task *)ptask)->ctx) ) return (void *)0;
+    #endif
+#endif
             try {
                 (*job)(); 
             } catch( const char * msg ) {
@@ -120,6 +144,14 @@ namespace pe {
                 std::cerr << ", task info: " << std::endl;
                 __task_debug_info( __running_task, stderr );
             }
+
+        #ifndef PECO_USE_UCONTEXT
+            // Jmp Back to the main context
+            longjmp(R_MAIN_CTX);
+          #ifndef PECO_USE_SIGUSR1
+            return (void *)0;
+          #endif
+        #endif
         }
 
         task* __create_task( task_job_t job ) {
@@ -145,6 +177,21 @@ namespace pe {
             _ptask->ctx.uc_link = P_MAIN_CTX;
 
             makecontext(&_ptask->ctx, (context_job_t)&__job_run, 1, _ptask->pjob);
+        #else
+
+            #ifdef PECO_USE_SIGUSR1
+
+            _ptask->task_stack.ss_flags = 0;
+            _ptask->task_stack.ss_size = TASK_STACK_SIZE;
+            _ptask->task_stack.ss_sp = _ptask->stack;
+
+            #else
+
+            pthread_attr_init(&_ptask->task_attr);
+            pthread_attr_setstack(&_ptask->task_attr, _ptask->stack, TASK_STACK_SIZE);
+
+            #endif
+
         #endif
 
             // Init the status
@@ -201,6 +248,15 @@ namespace pe {
 
             // Save the job on heap
             makecontext(&ptask->ctx, (context_job_t)&__job_run, 1, ptask->pjob);
+        #else
+            #ifdef PECO_USE_SIGUSR1
+            ptask->task_stack.ss_sp = ptask->stack;
+            ptask->task_stack.s_flags = 0;
+            #endif
+
+            // Make this task looks like a new one
+            ptask->status = task_status_pending;
+
         #endif
         }
 
@@ -243,6 +299,10 @@ namespace pe {
             if ( ptask->next_task != NULL ) {
                 ptask->next_task->prev_task = ptask->prev_task;
             }
+
+            #if !defined(PECO_USE_UCONTEXT) && !defined(PECO_USE_SIGUSR1)
+            pthread_attr_destroy(&ptask->task_attr);
+            #endif
 
             free(ptask);
             __all_task_count -= 1;
@@ -350,6 +410,11 @@ namespace pe {
 
         // Internal task switcher
         void __switch_task( task* ptask ) {
+            #ifndef PECO_USE_UCONTEXT
+            // Save the old status
+            auto _tstatus = ptask->status;
+            #endif
+
             if ( ptask->status != task_status_stopped ) {
                 ptask->status = task_status_running;
             }
@@ -364,7 +429,34 @@ namespace pe {
                 std::cout << CLI_BLUE << "X main => " << ptask->id << CLI_NOR << std::endl;
             )
         #ifdef PECO_USE_UCONTEXT
+
             swapcontext(P_MAIN_CTX, &ptask->ctx);
+
+        #else
+            if ( _tstatus == task_status_pending ) {
+            #ifdef PECO_USE_SIGUSR1
+                // Raise the signal to switch to the stack
+                // And the handler will call setjmp and return immediately
+                sigaltstack(&ptask->task_stack, NULL);
+
+                raise(SIGUSR1);
+
+                // Disable the altstack
+                ptask->task_stack.ss_flags = SS_DISABLE;
+                sigaltstack(&(ptask->task_stack), NULL);
+            #else
+                // Create a thread, and it will return immediately
+                pthread_t _t;
+                ignore_result( pthread_create(&_t, &(ptask->task_attr), &__job_run, (void *)ptask) );
+                void *_st;
+                pthread_join(_t, &_st);
+
+            #endif
+            }
+
+            if ( !setjmp(R_MAIN_CTX) ) {
+                longjmp(ptask->ctx, 1);
+            }
         #endif
             // If the task's status is running, means the last task just
             // finished and quit, then check if the task is a oneshot task
@@ -399,6 +491,10 @@ namespace pe {
         #ifdef PECO_USE_UCONTEXT
             swapcontext(&__running_task->ctx, P_MAIN_CTX);
             // setcontext(&main_ctx_);
+        #else
+            if ( !setjmp(__running_task->ctx) ) {
+                longjmp(R_MAIN_CTX, 1);
+            }
         #endif
         }
 
@@ -738,6 +834,17 @@ namespace pe {
             // Initalize to ignore some sig
             // SIGPIPE
             signal(SIGPIPE, SIG_IGN);
+
+            #ifdef PECO_USE_SIGUSR1
+
+            // register the signal to run job
+            struct sigaction    sa;            
+            sa.sa_handler = &__job_run;
+            sa.sa_flags = SA_ONSTACK;
+            sigemptyset(&sa.sa_mask);
+            sigaction(SIGUSR1, &sa, NULL);
+            
+            #endif
 
             core_fd_create(__core_fd);
             __core_events = (core_event_t *)calloc(CO_MAX_SO_EVENTS, sizeof(core_event_t));

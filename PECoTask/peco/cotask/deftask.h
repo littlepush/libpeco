@@ -38,6 +38,14 @@ namespace pe {
         #ifdef PECO_USE_UCONTEXT
             // Context for the job
             ucontext_t          ctx;
+        #else
+            // Jump Buffer
+            jmp_buf             ctx;
+            #ifdef PECO_USE_SIGUSR1
+            stack_t             task_stack;
+            #else
+            pthread_attr_t      task_attr;
+            #endif
         #endif
             // The real running job's point
             task_job_t*         pjob;
