@@ -468,9 +468,9 @@ namespace pe { namespace co { namespace net {
             flt_contain = DNSFilter::create_root_node();
 
             // Begin Host file check loop
-            this_loop.do_loop([this]() {
+            loop::main.do_loop([this]() {
                 // If i am the last task, quit
-                if ( this_loop.task_count() == 1 ) {
+                if ( loop::main.task_count() == 1 ) {
                     this_task::cancel_loop();
                     return;
                 }

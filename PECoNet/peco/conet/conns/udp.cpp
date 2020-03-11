@@ -60,12 +60,12 @@ namespace pe { namespace co { namespace net { namespace udp {
 
     // Read data from the socket
     socket_op_status read_from(
-        task* ptask,
+        task_t ptask,
         string& buffer,
         struct sockaddr_in* addr,
         pe::co::duration_t timedout 
     ) {
-        if ( !rawf::has_data_pending((SOCKET_T)ptask->id) ) {
+        if ( !rawf::has_data_pending((SOCKET_T)task_get_id(ptask)) ) {
             auto _signal = this_task::wait_other_task_for_event(
                 ptask,
                 event_type::event_read,
@@ -79,7 +79,7 @@ namespace pe { namespace co { namespace net { namespace udp {
         unsigned _solen = sizeof(struct sockaddr_in);
         buffer = std::forward< string >( 
             rawf::read(
-                (SOCKET_T)ptask->id,
+                (SOCKET_T)task_get_id(ptask),
                 std::bind(::recvfrom,
                     std::placeholders::_1,
                     std::placeholders::_2,
@@ -90,7 +90,7 @@ namespace pe { namespace co { namespace net { namespace udp {
                 )
             )
         );
-        ON_DEBUG_CONET(std::cout << "<= " << ptask->id << ": " << buffer.size() << std::endl;)
+        ON_DEBUG_CONET(std::cout << "<= " << task_get_id(ptask) << ": " << buffer.size() << std::endl;)
         return (buffer.size() > 0 ? op_done : op_failed);
     }
     socket_op_status read( 
@@ -177,7 +177,7 @@ namespace pe { namespace co { namespace net { namespace udp {
     }
 
     socket_op_status write_to( 
-        task* ptask, 
+        task_t ptask, 
         const char* data, 
         uint32_t length, 
         struct sockaddr_in addr,
@@ -187,7 +187,7 @@ namespace pe { namespace co { namespace net { namespace udp {
         size_t _sent = 0;
         do {
             int _ret = rawf::write(
-                (SOCKET_T)ptask->id,
+                (SOCKET_T)task_get_id(ptask),
                 data + _sent, length - _sent,
                 std::bind(::sendto,
                     std::placeholders::_1,
@@ -206,24 +206,24 @@ namespace pe { namespace co { namespace net { namespace udp {
             event_type::event_write,
             timedout
         ) );
-        ON_DEBUG_CONET(std::cout << "=> " << ptask->id << ": " << _sent << std::endl;)
+        ON_DEBUG_CONET(std::cout << "=> " << task_get_id(ptask) << ": " << _sent << std::endl;)
         return (_sent == length ? op_done : op_failed);
     }
     // Redirect data between two socket use the
     // established tunnel
     // If there is no tunnel, return false, otherwise
     // after the tunnel has broken, return true
-    bool redirect_data( struct sockaddr_in addr, task * ptask, write_to_t hwt ) {
+    bool redirect_data( struct sockaddr_in addr, task_t ptask, write_to_t hwt ) {
         // Both mark to 1
-        ptask->reserved_flags.flag0 = 1;
-        this_task::get_task()->reserved_flags.flag0 = 1;
+        task_set_user_flag0(ptask, 1);
+        this_task::set_user_flag0(1);
 
         buffer_guard_16k _sbuf;
         uint32_t _blen = buffer_guard_16k::blen;
         socket_op_status _op = op_failed;
         while ( (_op = udp::read(_sbuf.buf, _blen, &addr)) != op_failed ) {
             // Peer has been closed
-            if ( this_task::get_task()->reserved_flags.flag0 == 0 ) break;
+            if ( this_task::get_user_flag0() == 0 ) break;
             
             if ( _op == op_timedout ) continue;
             if ( op_done != hwt(
@@ -231,8 +231,8 @@ namespace pe { namespace co { namespace net { namespace udp {
                 NET_DEFAULT_TIMEOUT) ) break;
             _blen = buffer_guard_16k::blen;
         }
-        if ( this_task::get_task()->reserved_flags.flag0 == 1 ) {
-            ptask->reserved_flags.flag0 = 0;
+        if ( this_task::get_user_flag0() == 1 ) {
+            task_set_user_flag0(ptask, 0);
         }
 
         return true;

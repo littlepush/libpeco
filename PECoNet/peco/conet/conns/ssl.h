@@ -193,10 +193,10 @@ namespace pe { namespace co { namespace net {
 
         // Set the arg as ctx
         static void set_ctx( ssl_ctx_t ctx );
-        static void set_ctx( task * ptask, ssl_ctx_t ctx );
+        static void set_ctx( task_t ptask, ssl_ctx_t ctx );
         // Set the arg as ssl
         static void set_ssl( ssl_t ssl );
-        static void set_ssl( task * ptask, ssl_t ssl );
+        static void set_ssl( task_t ptask, ssl_t ssl );
 
 
         // Listen on the socket, the socket must has been bound
@@ -220,7 +220,7 @@ namespace pe { namespace co { namespace net {
 
         // Read data from the socket
         static socket_op_status read_from(
-            task* ptask,
+            task_t ptask,
             string& buffer,
             pe::co::duration_t timedout = NET_DEFAULT_TIMEOUT 
         );
@@ -245,7 +245,7 @@ namespace pe { namespace co { namespace net {
             pe::co::duration_t timedout = NET_DEFAULT_TIMEOUT
         );
         static socket_op_status write_to( 
-            task* ptask, 
+            task_t ptask, 
             const char* data, 
             uint32_t length, 
             pe::co::duration_t timedout = NET_DEFAULT_TIMEOUT
@@ -255,7 +255,7 @@ namespace pe { namespace co { namespace net {
         // established tunnel
         // If there is no tunnel, return false, otherwise
         // after the tunnel has broken, return true
-        static bool redirect_data( task * ptask, write_to_t hwt = ssl::write_to );
+        static bool redirect_data( task_t ptask, write_to_t hwt = ssl::write_to );
     };
     // The tcp factory
     typedef conn_factory< ssl >  ssl_factory;

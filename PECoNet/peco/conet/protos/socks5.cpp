@@ -230,16 +230,16 @@ namespace pe { namespace co { namespace net {
 
     // Get current incoming's target address
     std::string socks5::get_target_addr() {
-        task * _ptask = this_task::get_task();
-        if ( _ptask->arg == NULL ) return std::string("");
-        return ((__socks5_target_info *)_ptask->arg)->addr;
+        void *_arg = this_task::get_arg();
+        if ( _arg == NULL ) return std::string("");
+        return ((__socks5_target_info *)_arg)->addr;
     }
 
     // Get current incoming's target port
     uint16_t socks5::get_target_port() {
-        task * _ptask = this_task::get_task();
-        if ( _ptask->arg == NULL ) return 0;
-        return ((__socks5_target_info *)_ptask->arg)->port;
+        void *_arg = this_task::get_arg();
+        if ( _arg == NULL ) return 0;
+        return ((__socks5_target_info *)_arg)->port;
     }
 
     // Listen
@@ -249,7 +249,7 @@ namespace pe { namespace co { namespace net {
         ) {
             // Save the target info in the arg
             __socks5_target_info _ti{addr, port};
-            this_task::get_task()->arg = (void *)&_ti;
+            this_task::set_arg((void *)&_ti);
             if ( on_accept ) on_accept();
         });
     }
@@ -276,7 +276,7 @@ namespace pe { namespace co { namespace net {
 
     // Read data from the socket
     socket_op_status socks5::read_from(
-        task* ptask,
+        task_t ptask,
         string& buffer,
         pe::co::duration_t timedout
     ) {
@@ -311,7 +311,7 @@ namespace pe { namespace co { namespace net {
         return net::tcp::write(data, length, timedout);
     }
     socket_op_status socks5::write_to(
-        task* ptask, 
+        task_t ptask, 
         const char* data, 
         uint32_t length, 
         pe::co::duration_t timedout
@@ -319,7 +319,7 @@ namespace pe { namespace co { namespace net {
         return net::tcp::write_to(ptask, data, length, timedout);
     }
 
-    bool socks5::redirect_data( task * ptask, write_to_t hwt ) {
+    bool socks5::redirect_data( task_t ptask, write_to_t hwt ) {
         return net::tcp::redirect_data( ptask, hwt );
     }
 }}}

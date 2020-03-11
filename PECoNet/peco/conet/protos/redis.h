@@ -190,7 +190,7 @@ namespace pe { namespace co { namespace net { namespace redis {
         bool                        connecting_;
         bool                        connected_;
         condition                   cond_connected_;
-        task *                      keepalive_;
+        task_t                      keepalive_;
 
         // // Query Command Pool
         // std::queue< query_item_t >  query_queue_;
@@ -277,13 +277,13 @@ namespace pe { namespace co { namespace net { namespace redis {
         result_t query( command&& cmd );
 
         // Subscribe
-        task * subscribe( 
+        task_t subscribe( 
             command&& cmd, 
             std::function< void (const std::string&, const std::string&) > cb
         );
 
         // Unsubscribe
-        void unsubscribe( task * subtask );
+        void unsubscribe( task_t subtask );
 
         // Auto create the command and query
         template < typename cmd_t >
@@ -301,7 +301,7 @@ namespace pe { namespace co { namespace net { namespace redis {
             return query( std::move(_c) );
         }
         template < typename... cmd_t >
-        task * subscribe( 
+        task_t subscribe( 
             std::function< void(const std::string&, const std::string&) > cb,
             const cmd_t&... c
         ) {

@@ -69,7 +69,7 @@ namespace pe { namespace co { namespace net {
 
         // The internal socket object
         net::SOCKET_T       conn_obj;
-        task *              conn_task;
+        task_t              conn_task;
 
         // Data operator
         conn_data_in<_ConnType>     in;
@@ -80,7 +80,7 @@ namespace pe { namespace co { namespace net {
                 conn_obj = -1;
                 conn_task = NULL;
             } else {
-                conn_task = this_loop.do_job(conn_obj, [t]() {
+                conn_task = loop::main.do_job(conn_obj, [t]() {
                     t(self_t{this_task::get_id(), this_task::get_task()});
                 });
             }
@@ -121,14 +121,14 @@ namespace pe { namespace co { namespace net {
 
         // The internal socket object
         net::SOCKET_T       conn_obj;
-        task *              conn_task;
+        task_t              conn_task;
 
         conn_listen_item<_ConnType>& operator += ( conn_task_t t ) {
             if ( SOCKET_NOT_VALIDATE(conn_obj) ) {
                 conn_obj = -1;
                 conn_task = NULL;
             } else {
-                conn_task = this_loop.do_job(conn_obj, [t]() {
+                conn_task = loop::main.do_job(conn_obj, [t]() {
                     _ConnType::listen([t]() {
                         t(item_t{this_task::get_id(), this_task::get_task()});
                     });

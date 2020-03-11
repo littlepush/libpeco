@@ -23,7 +23,7 @@ namespace pe {
             // 
             do {
                 this_task::yield();
-                if ( this_task::status() == task_status_stopped ) break;
+                if ( this_task::get_status() == task_status_stopped ) break;
 
                 // Go Step if has any
                 // Continue to do, ignore the flag
@@ -35,16 +35,15 @@ namespace pe {
                     ta->job_q.pop();
                     _j();
                     this_task::yield();
-                    if ( this_task::status() == task_status_stopped ) break;
+                    if ( this_task::get_status() == task_status_stopped ) break;
                 }
 
                 // Break if the task has already been stopped
-                if ( this_task::status() == task_status_stopped ) break;
+                if ( this_task::get_status() == task_status_stopped ) break;
             } while ( _psem->fetch() );
 
             ON_DEBUG_COTASK(
-                std::cout << "stop step queue for taskadapter bind with @" << 
-                    this_task::get_id() << std::endl;
+                std::cout << "stop step queue for taskadapter bind with @" << this_task::get_id() << std::endl;
             )
         }
 
@@ -53,11 +52,11 @@ namespace pe {
         {
             // Create the pipe
             if ( job != nullptr ) job_q.push(job);
-            t = this_loop.do_job([this]() {
+            t = loop::main.do_job([this]() {
                 __stepqueue(this);
             });
             ON_DEBUG_COTASK(
-                std::cout << "create taskadapter with task id: " << t->id << std::endl;
+                std::cout << "create taskadapter with task id: " << task_get_id(t) << std::endl;
             )
         }
 
@@ -66,7 +65,7 @@ namespace pe {
         {
             // Create the pipe
             if ( job != nullptr ) job_q.push(job);
-            t = this_loop.do_job(fd, [this]() {
+            t = loop::main.do_job(fd, [this]() {
                 __stepqueue(this);
             });
             ON_DEBUG_COTASK(
@@ -76,7 +75,7 @@ namespace pe {
 
         taskadapter::~taskadapter( ) {
             ON_DEBUG_COTASK(
-                std::cout << "destory taskadapter with task id: " << t->id << std::endl;
+                std::cout << "destory taskadapter with task id: " << task_get_id(t) << std::endl;
             )
             sem->cancel();
             task_exit(t);

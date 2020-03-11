@@ -12,7 +12,6 @@
 #ifndef PE_CO_TASK_PROCESS_H__
 #define PE_CO_TASK_PROCESS_H__
 
-#include <peco/cotask/cotask.hpp>
 #include <peco/cotask/loop.h>
 
 namespace pe {
@@ -42,8 +41,8 @@ namespace pe {
             process& operator << ( const std::string& arg );
 
             // Bind the output callback
-            output_t std_out;
-            output_t std_err;
+            output_t stdout;
+            output_t stderr;
 
             // Write input to the process
             void input( std::string&& data );

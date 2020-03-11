@@ -12,7 +12,6 @@
 #ifndef PE_CO_TASK_EVENTQUEUE_H__
 #define PE_CO_TASK_EVENTQUEUE_H__
 
-#include <peco/cotask/cotask.hpp>
 #include <peco/cotask/loop.h>
 #include <peco/cotask/taskadapter.h>
 
@@ -24,12 +23,12 @@ namespace pe {
             typedef struct {
                 _EventItem          e;
                 _ResultItem*        ret;
-                other_task          ot;
+                task_t              ot;
             } event_wrapper_t;
 
             // The internal event queue
             std::list< event_wrapper_t >        eq_;
-            task *                              loop_task_;
+            task_t                              loop_task_;
 
         public: 
             typedef std::function< bool (_EventItem&&, _ResultItem&) >  task_handler_t;
@@ -40,7 +39,7 @@ namespace pe {
             // Begin the internal block loop to fetch and process the task
             // This method should be invoke in the loop working task
             void begin_loop( task_handler_t h ) {
-                if ( loop_task_ != NULL ) return;
+                if ( loop_task_ != 0 ) return;
                 loop_task_ = this_task::get_task();
 
                 while ( this_task::holding() ) {
@@ -50,27 +49,27 @@ namespace pe {
                     bool _r = h(std::move(_ew.e), _lres);
                     // If the pending task has quit during we handle the event
                     if ( eq_.size() == 0 ) continue;
-                    if ( eq_.front().ot._other != _ew.ot._other ) continue;
+                    if ( eq_.front().ot != _ew.ot ) continue;
                     // Now we still hold the task
                     // Copy the result
                     (*_ew.ret) = std::move(_lres);
-                    if ( _r ) _ew.ot.go_on();
-                    else _ew.ot.stop();
+                    if ( _r ) task_go_on(_ew.ot);
+                    else task_stop(_ew.ot);
                     eq_.pop_front();
                 }
 
                 // Tell every pending query to stop
                 while ( eq_.size() > 0 ) {
-                    eq_.front().ot.stop();
+                    task_stop(eq_.front().ot);
                     eq_.pop_front();
                 }
             }
 
             // Stop Loop
             void stop_loop( ) {
-                if ( loop_task_ == NULL ) return;
+                if ( loop_task_ == 0 ) return;
                 task_stop( loop_task_ );
-                loop_task_ = NULL;
+                loop_task_ = 0;
             }
 
             bool ask( _EventItem&& eitem, _ResultItem& ret ) {
@@ -78,13 +77,13 @@ namespace pe {
                 eq_.emplace_back((event_wrapper_t){
                     std::move(eitem),
                     &ret,
-                    this_task::wrapper()
+                    this_task::get_task()
                 });
                 task_go_on( loop_task_ );
                 bool _r = this_task::holding();
                 if ( !_r ) {
                     auto _it = find_if(eq_.begin(), eq_.end(), [](const event_wrapper_t& ew) {
-                        return ew.ot._other == this_task::get_task();
+                        return ew.ot == this_task::get_task();
                     });
                     if ( _it != eq_.end() ) eq_.erase(_it);
                 }
@@ -105,7 +104,7 @@ namespace pe {
                 _EventItem          e;
                 _ResultItem*        ret;
                 bool                os; // One shot
-                other_task          ot;
+                task_t              ot;
             } event_wrapper_t;
 
             // The internal event queue
@@ -125,7 +124,7 @@ namespace pe {
                 if ( do_require_(std::move(_ew.e)) ) {
                     hm_.emplace(std::make_pair(_k, std::move(_ew)));
                 } else {
-                    _ew.ot.stop();
+                    task_stop(_ew.ot);
                 }
                 eq_.pop_front();
             }
@@ -148,7 +147,7 @@ namespace pe {
                     auto _it = hm_.find(_k);
                     if ( _it == hm_.end() ) continue;   // ignore?
                     *_it->second.ret = std::move(_r);
-                    _it->second.ot.go_on();
+                    task_go_on(_it->second.ot);
                     // If the request is continues, do not remove it
                     if ( _it->second.os ) continue;
                     _it = hm_.find(_k);
@@ -164,11 +163,11 @@ namespace pe {
 
                 // Tell every pending query to stop
                 while ( eq_.size() > 0 ) {
-                    eq_.front().ot.stop();
+                    task_stop(eq_.front().ot);
                     eq_.pop_front();
                 }
                 for ( auto& kv : hm_ ) {
-                    kv.second.ot.stop();
+                    task_stop(kv.second.ot);
                 }
                 // Wait until all ask task quit.
                 while ( hm_.size() > 0 ) this_task::yield();
@@ -185,7 +184,7 @@ namespace pe {
                     eitem,
                     &ret,
                     false,
-                    this_task::wrapper()
+                    this_task::get_task()
                 });
                 adapter_->step([this]() {
                     this->make_require_();
@@ -194,7 +193,7 @@ namespace pe {
                 if ( !_r ) {
                     // Remove
                     auto _it = find_if(eq_.begin(), eq_.end(), [](const event_wrapper_t& e) {
-                        return ( e.ot._other == this_task::get_task() );
+                        return ( e.ot == this_task::get_task() );
                     });
                     // the job hasn't been executed
                     if ( _it != eq_.end() ) {
@@ -214,7 +213,7 @@ namespace pe {
                     eitem,
                     &ret,
                     true,
-                    this_task::wrapper()
+                    this_task::get_task()
                 });
                 adapter_->step([this]() {
                     this->make_require_();
@@ -228,7 +227,7 @@ namespace pe {
                 // Holding failed, break from the while loop, try to remove
                 // Remove
                 auto _it = find_if(eq_.begin(), eq_.end(), [](const event_wrapper_t& e) {
-                    return ( e.ot._other == this_task::get_task() );
+                    return ( e.ot == this_task::get_task() );
                 });
                 // the job hasn't been executed
                 if ( _it != eq_.end() ) {

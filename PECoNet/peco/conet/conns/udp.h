@@ -35,7 +35,7 @@ namespace pe { namespace co { namespace net { namespace udp {
 
     // Read data from the socket
     socket_op_status read_from(
-        task* ptask,
+        task_t ptask,
         string& buffer,
         struct sockaddr_in* addr,
         pe::co::duration_t timedout = NET_DEFAULT_TIMEOUT 
@@ -65,7 +65,7 @@ namespace pe { namespace co { namespace net { namespace udp {
         pe::co::duration_t timedout = NET_DEFAULT_TIMEOUT
     );
     socket_op_status write_to( 
-        task* ptask, 
+        task_t ptask, 
         const char* data, 
         uint32_t length, 
         struct sockaddr_in addr,
@@ -76,7 +76,7 @@ namespace pe { namespace co { namespace net { namespace udp {
     // established tunnel
     // If there is no tunnel, return false, otherwise
     // after the tunnel has broken, return true
-    bool redirect_data( struct sockaddr_in addr, task * ptask, write_to_t hwt );
+    bool redirect_data( struct sockaddr_in addr, task_t ptask, write_to_t hwt );
 
 
 }}}}

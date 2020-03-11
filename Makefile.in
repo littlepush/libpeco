@@ -475,13 +475,10 @@ peutilsSub_HEADERS = \
 
 pecotaskSub_HEADERS = \
 	PECoTask/peco/cotask/condition.h \
-	PECoTask/peco/cotask/epoll_wrapper.h \
 	PECoTask/peco/cotask/loop.h \
 	PECoTask/peco/cotask/process.h \
 	PECoTask/peco/cotask/eventqueue.h \
-	PECoTask/peco/cotask/taskadapter.h \
-	PECoTask/peco/cotask/cotask.hpp \
-	PECoTask/peco/cotask/kevent_wrapper.h
+	PECoTask/peco/cotask/taskadapter.h
 
 peconetutilsSub_HEADERS = \
 	PECoNet/peco/conet/utils/basic.h \

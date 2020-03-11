@@ -12,7 +12,6 @@
 #ifndef PE_CO_TASK_COTASK_H__
 #define PE_CO_TASK_COTASK_H__
 
-#include <peco/cotask/cotask.hpp>
 #include <peco/cotask/loop.h>
 #include <peco/cotask/taskadapter.h>
 #include <peco/cotask/process.h>

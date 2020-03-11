@@ -98,7 +98,7 @@ namespace pe { namespace co { namespace net {
     // Switch current adapter's data with other adapter,
     // this method will block current task
     void iadapter::switch_data( iadapter* other_adapter ) {
-        this_loop.do_job([this, other_adapter]() {
+        loop::main.do_job([this, other_adapter]() {
             other_adapter->transfer_data(this);
         });
         this->transfer_data(other_adapter);
@@ -111,24 +111,24 @@ namespace pe { namespace co { namespace net {
         // Can not be destoried
         destory_flag_ = false;
 
-        task *_i_task = this->get_task();
-        task *_o_task = other_adapter->get_task();
-        _i_task->reserved_flags.flag1 = (uint8_t)1;
-        _o_task->reserved_flags.flag1 = (uint8_t)1;
+        task_t _i_task = this->get_task();
+        task_t _o_task = other_adapter->get_task();
+        task_set_user_flag0(_i_task, 1);
+        task_set_user_flag0(_o_task, 1);
 
         ON_DEBUG(
-            long _i_id = (long)_i_task->id;
-            long _o_id = (long)_o_task->id;
+            long _i_id = (long)task_get_id(_i_task);
+            long _o_id = (long)task_get_id(_o_task);
         )
 
-        rawf::buffersize(_i_task->id, 262144, 262144); // 256K buffer
+        rawf::buffersize(task_get_id(_i_task), 262144, 262144); // 256K buffer
 
         if ( strbuf_.size() > 0 ) {
             if ( !other_adapter->direct_write(std::move(strbuf_)) ) {
-                if ( _i_task->reserved_flags.flag1 == (uint8_t)1 ) {
-                    _o_task->reserved_flags.flag1 = (uint8_t)0;
+                if ( task_get_user_flag0(_i_task) == 1 ) {
+                    task_set_user_flag0(_o_task, 0);
                     task_stop(_o_task);
-                } 
+                }
                 destory_flag_ = true;
                 if ( quit_task_ != NULL ) task_go_on(quit_task_);
                 return;
@@ -141,9 +141,9 @@ namespace pe { namespace co { namespace net {
                 std::cout << "on transfer from " << _i_id << " -> " 
                     << _o_id << ", read flag: " << _r.first 
                     << ", data size: " << _r.second.size() << ", my flag is: "
-                    << (int)_i_task->reserved_flags.flag1 << std::endl;
+                    << (int)task_get_user_flag0(_i_task) << std::endl;
             )
-            if ( _i_task->reserved_flags.flag1 == (uint8_t)0 ) break;
+            if ( task_get_user_flag0(_i_task) == 0 ) break;
             if ( _r.first == op_timedout ) continue;
             if ( _r.first == op_failed ) break;
             // Write failed, means the other adapter has been disconnected
@@ -157,8 +157,8 @@ namespace pe { namespace co { namespace net {
         } while ( !destory_flag_ );
 
         // Check if this task is broken first.
-        if ( _i_task->reserved_flags.flag1 == (uint8_t)1 ) {
-            _o_task->reserved_flags.flag1 = (uint8_t)0;
+        if ( task_get_user_flag0(_i_task) == 1 ) {
+            task_set_user_flag0(_o_task, 0);
             task_stop(_o_task);
         }
         destory_flag_ = true;
@@ -176,7 +176,7 @@ namespace pe { namespace co { namespace net {
             std::cout << "destory netadapter" << std::endl;
         )
     }
-    task * netadapter::get_task() { return t; }
+    task_t netadapter::get_task() { return t; }
 
     // Server adapter
     serveradapter::serveradapter() : t_(this_task::get_task()) { }
@@ -185,7 +185,7 @@ namespace pe { namespace co { namespace net {
             std::cout << "destory serveradapter" << std::endl;
         )
     }
-    task * serveradapter::get_task() { return t_; }
+    task_t serveradapter::get_task() { return t_; }
 
     // Create a tcp socket and bind to the adapter
     tcpadapter::tcpadapter() : netadapter( tcp::create() ) { }
@@ -203,9 +203,9 @@ namespace pe { namespace co { namespace net {
         if ( _pp == std::string::npos ) return false;
         std::string _addr = host.substr(0, _pp);
         uint16_t _port = (uint16_t)std::stoi(host.substr(_pp + 1));
-        task *_t = this_task::get_task();
+        task_t _t = this_task::get_task();
         this->step([_addr, _port, _t, timedout]() {
-            other_task_keeper _ot(_t);
+            task_helper _ot(_t);
             if ( op_done != tcp::connect( _addr, _port, timedout ) ) return;
             _ot.job_done();
         });
@@ -285,9 +285,9 @@ namespace pe { namespace co { namespace net {
         if ( _pp == std::string::npos ) return false;
         std::string _addr = host.substr(0, _pp);
         uint16_t _port = (uint16_t)std::stoi(host.substr(_pp + 1));
-        task *_t = this_task::get_task();
+        task_t _t = this_task::get_task();
         this->step([_addr, _port, _t, timedout]() {
-            other_task_keeper _ot(_t);
+            task_helper _ot(_t);
             if ( op_done != ssl::connect( _addr, _port, timedout ) ) return;
             _ot.job_done();
         });
@@ -401,9 +401,9 @@ namespace pe { namespace co { namespace net {
 
     // Parse the host to connection's host address
     bool udsadapter::connect( const std::string& host, duration_t timedout ) {
-        task* _t = this_task::get_task();
+        task_t _t = this_task::get_task();
         this->step([host, _t, timedout]() {
-            other_task_keeper _ot(_t);
+            task_helper _ot(_t);
             if ( op_done != uds::connect( host, timedout ) ) return;
             _ot.job_done();
         });
@@ -476,9 +476,9 @@ namespace pe { namespace co { namespace net {
         if ( _pp == std::string::npos ) return false;
         std::string _addr = host.substr(0, _pp);
         uint16_t _port = (uint16_t)std::stoi(host.substr(_pp + 1));
-        task* _t = this_task::get_task();
+        task_t _t = this_task::get_task();
         this->step([_addr, _port, this, _t, timedout]() {
-            other_task_keeper _ot(_t);
+            task_helper _ot(_t);
             socks5::connect_address _ca;
             _ca.proxy.addr = this->socks5_addr.ip.str();
             _ca.proxy.port = this->socks5_addr.port;
@@ -562,9 +562,9 @@ namespace pe { namespace co { namespace net {
         if ( _pp == std::string::npos ) return false;
         std::string _addr = host.substr(0, _pp);
         uint16_t _port = (uint16_t)std::stoi(host.substr(_pp + 1));
-        task* _t = this_task::get_task();
+        task_t _t = this_task::get_task();
         this->step([_addr, _port, this, _t, timedout]() {
-            other_task_keeper _ot(_t);
+            task_helper _ot(_t);
             socks5::connect_address _ca;
             _ca.proxy.addr = this->socks5_addr.ip.str();
             _ca.proxy.port = this->socks5_addr.port;
@@ -574,7 +574,7 @@ namespace pe { namespace co { namespace net {
 
             // Use the socks5 tunnel to build a ssl connection
             SOCKET_T _so = (SOCKET_T)pe::co::this_task::get_id();
-            ssl::ssl_t _ssl = (ssl::ssl_t)pe::co::this_task::get_task()->arg;
+            ssl::ssl_t _ssl = (ssl::ssl_t)this_task::get_arg();
             if ( ! ssl::connect_socket_to_ssl_env(_so, _ssl) ) return;
 
             _ot.job_done();

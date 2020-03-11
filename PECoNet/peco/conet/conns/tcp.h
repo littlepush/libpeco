@@ -57,7 +57,7 @@ namespace pe { namespace co { namespace net {
 
         // Read data from the socket
         static socket_op_status read_from(
-            task* ptask,
+            task_t ptask,
             string& buffer,
             pe::co::duration_t timedout = NET_DEFAULT_TIMEOUT 
         );
@@ -82,7 +82,7 @@ namespace pe { namespace co { namespace net {
             pe::co::duration_t timedout = NET_DEFAULT_TIMEOUT
         );
         static socket_op_status write_to( 
-            task* ptask, 
+            task_t ptask, 
             const char* data, 
             uint32_t length, 
             pe::co::duration_t timedout = NET_DEFAULT_TIMEOUT
@@ -92,7 +92,7 @@ namespace pe { namespace co { namespace net {
         // established tunnel
         // If there is no tunnel, return false, otherwise
         // after the tunnel has broken, return true
-        static bool redirect_data( task * ptask, write_to_t hwt = &write_to );
+        static bool redirect_data( task_t ptask, write_to_t hwt = &write_to );
 
         // Simple Redirect to Another TCP
         static void redirect_to_tcp( peer_t remote );

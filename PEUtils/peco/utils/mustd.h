@@ -34,7 +34,7 @@ SOFTWARE.
 #ifndef PZC_LIB_C_PZCSTD_H__
 #define PZC_LIB_C_PZCSTD_H__
 
-#define LIBPECO_STANDARD_VERSION 0x00020001
+#define LIBPECO_STANDARD_VERSION 0x00020002
 
 /*
     Check the target platform

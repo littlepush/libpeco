@@ -67,13 +67,10 @@ peutilsSub_HEADERS = \
 	PEUtils/peco/utils/json.h
 pecotaskSub_HEADERS = \
 	PECoTask/peco/cotask/condition.h \
-	PECoTask/peco/cotask/epoll_wrapper.h \
 	PECoTask/peco/cotask/loop.h \
 	PECoTask/peco/cotask/process.h \
 	PECoTask/peco/cotask/eventqueue.h \
-	PECoTask/peco/cotask/taskadapter.h \
-	PECoTask/peco/cotask/cotask.hpp \
-	PECoTask/peco/cotask/kevent_wrapper.h
+	PECoTask/peco/cotask/taskadapter.h
 peconetutilsSub_HEADERS = \
 	PECoNet/peco/conet/utils/basic.h \
 	PECoNet/peco/conet/utils/obj.h \
@@ -91,8 +88,10 @@ peconetprotosSub_HEADERS = \
 	PECoNet/peco/conet/protos/socks5.h \
 	PECoNet/peco/conet/protos/redis.h
 
+
 # Build Test Case
 bin_PROGRAMS = cotask_test1
 cotask_test1_LDADD = libpeco.la
 cotask_test1_SOURCES = \
 	PECoTask/peco/src/task_test1.cpp
+

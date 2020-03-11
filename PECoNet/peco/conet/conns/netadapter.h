@@ -32,7 +32,7 @@ namespace pe { namespace co { namespace net {
     protected: 
         std::string                     strbuf_;
         bool                            destory_flag_;
-        task*                           quit_task_;
+        task_t                          quit_task_;
     public: 
         typedef std::pair< socket_op_status, std::string >      data_type;
 
@@ -41,7 +41,7 @@ namespace pe { namespace co { namespace net {
         virtual ~iadapter() = 0;
 
         // Task Interface
-        virtual task * get_task() = 0;
+        virtual task_t get_task() = 0;
         // IO Interfaces
 
         // Write Data
@@ -92,7 +92,7 @@ namespace pe { namespace co { namespace net {
         virtual ~netadapter() = 0;
 
         // Task Interface
-        virtual task * get_task();
+        virtual task_t get_task();
 
         // Parse the host to connection's host address
         virtual bool connect( const std::string& host, duration_t timedout = NET_DEFAULT_TIMEOUT ) = 0;
@@ -101,13 +101,13 @@ namespace pe { namespace co { namespace net {
     // Server adapter
     class serveradapter : public iadapter {
     protected: 
-        task*           t_;
+        task_t              t_;
     public: 
         serveradapter();
         virtual ~serveradapter() = 0;
         
         // Task Interface
-        virtual task * get_task();
+        virtual task_t get_task();
     };
 
     // TCP Connection adapter

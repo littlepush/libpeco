@@ -12,7 +12,6 @@
 #ifndef PE_CO_TASK_CONDITION_H__
 #define PE_CO_TASK_CONDITION_H__
 
-#include <peco/cotask/cotask.hpp>
 #include <peco/cotask/loop.h>
 
 namespace pe {
@@ -22,9 +21,9 @@ namespace pe {
         class dispatcher {
         private: 
             int                         c_rw_[2];
-            task *                      waiting_task_;
+            task_t                      waiting_task_;
             int                         notify_flag_;
-            std::map< task*, bool >     pending_tasks_;
+            std::map< task_t, bool >    pending_tasks_;
 
             // Internal Wait
             void wait_();

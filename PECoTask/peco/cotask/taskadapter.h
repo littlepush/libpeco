@@ -12,15 +12,15 @@
 #ifndef PE_CO_TASK_TASKADAPTER_H__
 #define PE_CO_TASK_TASKADAPTER_H__
 
-#include <peco/cotask/cotask.hpp>
 #include <peco/cotask/loop.h>
 #include <peco/cotask/condition.h>
+#include <queue>
 
 namespace pe {
     namespace co {
 
         struct taskadapter {
-            task *                      t;
+            task_t                      t;
             std::queue< task_job_t >    job_q;
             semaphore *                 sem;
 

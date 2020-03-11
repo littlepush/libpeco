@@ -79,6 +79,7 @@ namespace pe { namespace co { namespace net {
             )
             return;
         }
+
         while ( true ) {
             auto _signal = pe::co::this_task::wait_for_event(
                 pe::co::event_type::event_read,
@@ -113,7 +114,7 @@ namespace pe { namespace co { namespace net {
                     rawf::buffersize(_inso, 1024 * 32, 1024 * 32);
                 }
                 // Start a new task for the incoming socket
-                this_loop.do_job( _inso, on_accept );
+                pe::co::loop::main.do_job( _inso, on_accept );
             }
         }
     }
@@ -148,11 +149,11 @@ namespace pe { namespace co { namespace net {
 
     // Read data from the socket
     socket_op_status uds::read_from(
-        task* ptask,
+        task_t ptask,
         string& buffer,
         pe::co::duration_t timedout 
     ) {
-        if ( !rawf::has_data_pending((SOCKET_T)ptask->id) ) {
+        if ( !rawf::has_data_pending((SOCKET_T)task_get_id(ptask)) ) {
             auto _signal = this_task::wait_other_task_for_event(
                 ptask,
                 event_type::event_read,
@@ -166,7 +167,7 @@ namespace pe { namespace co { namespace net {
 
         buffer = std::forward< string >( 
             rawf::read(
-                (SOCKET_T)ptask->id,
+                (SOCKET_T)task_get_id(ptask),
                 std::bind(::recv,
                     std::placeholders::_1,
                     std::placeholders::_2,
@@ -175,7 +176,7 @@ namespace pe { namespace co { namespace net {
                 )
             )
         );
-        ON_DEBUG_CONET(std::cout << "<= " << ptask->id << ": " << buffer.size() << std::endl;)
+        ON_DEBUG_CONET(std::cout << "<= " << task_get_id(ptask) << ": " << buffer.size() << std::endl;)
         return (buffer.size() > 0 ? op_done : op_failed);
     }
     socket_op_status uds::read( 
@@ -236,7 +237,7 @@ namespace pe { namespace co { namespace net {
     }
 
     socket_op_status uds::write_to( 
-        task* ptask, 
+        task_t ptask, 
         const char* data, 
         uint32_t length, 
         pe::co::duration_t timedout 
@@ -245,7 +246,7 @@ namespace pe { namespace co { namespace net {
         size_t _sent = 0;
         do {
             int _ret = rawf::write(
-                (SOCKET_T)ptask->id,
+                (SOCKET_T)task_get_id(ptask),
                 data + _sent, length - _sent,
                 std::bind(::send,
                     std::placeholders::_1,
@@ -262,7 +263,7 @@ namespace pe { namespace co { namespace net {
             event_type::event_write,
             timedout
         ) );
-        ON_DEBUG_CONET(std::cout << "=> " << ptask->id << ": " << _sent << std::endl;)
+        ON_DEBUG_CONET(std::cout << "=> " << task_get_id(ptask) << ": " << _sent << std::endl;)
         return (_sent == length ? op_done : op_failed);
     }
 
@@ -271,17 +272,17 @@ namespace pe { namespace co { namespace net {
     // established tunnel
     // If there is no tunnel, return false, otherwise
     // after the tunnel has broken, return true
-    bool uds::redirect_data( task * ptask, write_to_t hwt ) {
+    bool uds::redirect_data( task_t ptask, write_to_t hwt ) {
         // Both mark to 1
-        ptask->reserved_flags.flag0 = 1;
-        this_task::get_task()->reserved_flags.flag0 = 1;
+        task_set_user_flag0(ptask, 1);
+        this_task::set_user_flag0(1);
 
         buffer_guard_16k _sbuf;
         uint32_t _blen = buffer_guard_16k::blen;
         socket_op_status _op = op_failed;
         while ( (_op = uds::read(_sbuf.buf, _blen)) != op_failed ) {
             // Peer has been closed
-            if ( this_task::get_task()->reserved_flags.flag0 == 0 ) break;
+            if ( this_task::get_user_flag0() == 0 ) break;
             
             if ( _op == op_timedout ) continue;
             if ( op_done != hwt(
@@ -289,8 +290,8 @@ namespace pe { namespace co { namespace net {
                 NET_DEFAULT_TIMEOUT) ) break;
             _blen = buffer_guard_16k::blen;
         }
-        if ( this_task::get_task()->reserved_flags.flag0 == 1 ) {
-            ptask->reserved_flags.flag0 = 0;
+        if ( this_task::get_user_flag0() == 1 ) {
+            task_set_user_flag0(ptask, 0);
         }
 
         return true;

@@ -194,7 +194,7 @@ namespace pe {
                 close(c2p_err_[__WRITE_FD]); c2p_err_[__WRITE_FD] = -1;
                 close(c2p_in_[__READ_FD]); c2p_in_[__READ_FD] = -1;
 
-                this_loop.do_job(c2p_out_[__READ_FD], [this]() {
+                loop::main.do_job(c2p_out_[__READ_FD], [this]() {
                     parent_task::guard _pg;
                     while ( true ) {
                         long _pid = (long)this_task::get_id();
@@ -208,11 +208,11 @@ namespace pe {
                         std::string _buf = std::forward< std::string >(__pipe_read(_pid));
                         // Pipe closed
                         if ( _buf.size() == 0 ) break;
-                        if ( this->std_out ) this->std_out( std::move(_buf) );
+                        if ( this->stdout ) this->stdout( std::move(_buf) );
                     }
                 });
 
-                this_loop.do_job(c2p_err_[__READ_FD], [this]() {
+                loop::main.do_job(c2p_err_[__READ_FD], [this]() {
                     parent_task::guard _pg;
                     while ( true ) {
                         long _pid = (long)this_task::get_id();
@@ -226,7 +226,7 @@ namespace pe {
                         std::string _buf = std::forward< std::string >(__pipe_read(_pid));
                         // Pipe closed
                         if ( _buf.size() == 0 ) break;
-                        if ( this->std_err ) this->std_err( std::move(_buf) );
+                        if ( this->stderr ) this->stderr( std::move(_buf) );
                     }
                 });
 

@@ -392,6 +392,7 @@ namespace pe { namespace co { namespace net {
             )
             return;
         }
+
         while ( true ) {
             auto _signal = pe::co::this_task::wait_for_event(
                 pe::co::event_type::event_read,
@@ -405,7 +406,7 @@ namespace pe { namespace co { namespace net {
             }
             if ( _signal == pe::co::waiting_signals::no_signal ) continue;
 
-            ssl::ssl_ctx_t _ctx = (ssl::ssl_ctx_t)this_task::get_task()->arg;
+            ssl::ssl_ctx_t _ctx = (ssl::ssl_ctx_t)this_task::get_arg();
             // Get the incoming socket
             while ( true ) {
                 struct sockaddr _inaddr;
@@ -427,7 +428,7 @@ namespace pe { namespace co { namespace net {
                     // Set a 32K buffer
                     rawf::buffersize(_inso, 1024 * 32, 1024 * 32);
 
-                    this_loop.do_job(_inso, [_ctx, on_accept]() {
+                    pe::co::loop::main.do_job(_inso, [_ctx, on_accept]() {
                         ssl_item_wrapper<SSL> _sslw( std::bind(SSL_new, _ctx), SSL_free );
                         set_ssl(_sslw.ptr_object);
 
@@ -458,7 +459,7 @@ namespace pe { namespace co { namespace net {
         pe::co::duration_t timedout
     ) {
         SOCKET_T _so = (SOCKET_T)pe::co::this_task::get_id();
-        ssl::ssl_t _ssl = (ssl_t)pe::co::this_task::get_task()->arg;
+        ssl::ssl_t _ssl = (ssl_t)this_task::get_arg();
         auto _op = tcp::connect( remote, timedout );
         if ( op_done != _op ) return _op;
         if ( ! connect_socket_to_ssl_env(_so, _ssl) ) return op_failed;
@@ -482,7 +483,7 @@ namespace pe { namespace co { namespace net {
 
     // Read data from the socket
     socket_op_status ssl::read_from(
-        task* ptask,
+        task_t ptask,
         string& buffer,
         pe::co::duration_t timedout 
     ) {
@@ -490,7 +491,7 @@ namespace pe { namespace co { namespace net {
         size_t _origin_size = buffer.size();
         buffer.resize( _origin_size + _buf_size );
 
-        ssl::ssl_t _ssl = (ssl_t)ptask->arg;
+        ssl::ssl_t _ssl = (ssl_t)task_get_arg(ptask);
 
         int _ret = ssl_nonblocking_process( [&buffer](ssl_t ssl) {
             return SSL_read(ssl, (&buffer[0]), 1024);
@@ -507,7 +508,7 @@ namespace pe { namespace co { namespace net {
         if ( _ret == 0 ) return op_timedout;
         // Get some data
         ON_DEBUG_CONET(std::cout << "<= " << 
-            ptask->id << ": " << 
+            task_get_id(ptask) << ": " << 
             _ret << std::endl;)
         return op_done;
     }
@@ -535,7 +536,7 @@ namespace pe { namespace co { namespace net {
         pe::co::duration_t timedout
     ) {
         if ( buflen == 0 ) return op_failed;
-        ssl::ssl_t _ssl = (ssl_t)pe::co::this_task::get_task()->arg;
+        ssl::ssl_t _ssl = (ssl_t)this_task::get_arg();
 
         int _ret = ssl_nonblocking_process( [buffer, buflen](ssl_t ssl) {
             return SSL_read(ssl, buffer, buflen);
@@ -569,32 +570,32 @@ namespace pe { namespace co { namespace net {
     }
     // Set the arg as ctx
     void ssl::set_ctx( ssl_ctx_t ctx ) {
-        task *_ptask = this_task::get_task();
+        task_t _ptask = this_task::get_task();
         ssl::set_ctx( _ptask, ctx );
     }
-    void ssl::set_ctx( task * ptask, ssl_ctx_t ctx ) {
+    void ssl::set_ctx( task_t ptask, ssl_ctx_t ctx ) {
         if ( ptask == NULL ) return;
-        ptask->arg = (void *)ctx;
+        task_set_arg(ptask, (void *)ctx);
     }
     // Set the ssl
     void ssl::set_ssl( ssl_t ssl ) {
-        task *_ptask = this_task::get_task();
+        task_t _ptask = this_task::get_task();
         ssl::set_ssl(_ptask, ssl);
     }
-    void ssl::set_ssl( task * ptask, ssl_t ssl ) {
+    void ssl::set_ssl( task_t ptask, ssl_t ssl ) {
         if ( ptask == NULL ) return;
-        ptask->arg = (void *)ssl;
+        task_set_arg(ptask, (void *)ssl);
     }
 
     socket_op_status ssl::write_to( 
-        task* ptask, 
+        task_t ptask, 
         const char* data, 
         uint32_t length, 
         pe::co::duration_t timedout 
     ) {
         if ( length == 0 ) return op_done;
 
-        ssl::ssl_t _ssl = (ssl_t)ptask->arg;
+        ssl::ssl_t _ssl = (ssl_t)task_get_arg(ptask);
 
         uint32_t _sent = 0;
         do {
@@ -609,7 +610,7 @@ namespace pe { namespace co { namespace net {
         } while ( this_task::yield_if(_sent < length) );
         // Write all data
         ON_DEBUG_CONET(std::cout << "=> " << 
-            ptask->id << ": " << 
+            task_get_id(ptask) << ": " << 
             _sent << std::endl;)
         return op_done;
     }
@@ -619,17 +620,18 @@ namespace pe { namespace co { namespace net {
     // established tunnel
     // If there is no tunnel, return false, otherwise
     // after the tunnel has broken, return true
-    bool ssl::redirect_data( task * ptask, write_to_t hwt ) {
+    bool ssl::redirect_data( task_t ptask, write_to_t hwt ) {
         // Both mark to 1
-        ptask->reserved_flags.flag0 = 1;
-        this_task::get_task()->reserved_flags.flag0 = 1;
+        task_set_user_flag0(ptask, 1);
+        this_task::set_user_flag0(1);
+
 
         buffer_guard_16k _sbuf;
         uint32_t _blen = buffer_guard_16k::blen;
         socket_op_status _op = op_failed;
         while ( (_op = ssl::read(_sbuf.buf, _blen)) != op_failed ) {
             // Peer has been closed
-            if ( this_task::get_task()->reserved_flags.flag0 == 0 ) break;
+            if ( this_task::get_user_flag0() == 0 ) break;
             
             if ( _op == op_timedout ) continue;
             if ( op_done != hwt(
@@ -637,8 +639,8 @@ namespace pe { namespace co { namespace net {
                 NET_DEFAULT_TIMEOUT) ) break;
             _blen = buffer_guard_16k::blen;
         }
-        if ( this_task::get_task()->reserved_flags.flag0 == 1 ) {
-            ptask->reserved_flags.flag0 = 0;
+        if ( this_task::get_user_flag0() == 1 ) {
+            task_set_user_flag0(ptask, 0);
         }
 
         return true;

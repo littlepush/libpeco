@@ -82,7 +82,7 @@ namespace pe { namespace co { namespace net {
 
     // Write To Protocol
     typedef std::function< 
-        socket_op_status( task *, const char*, uint32_t, duration_t ) 
+        socket_op_status( task_t, const char*, uint32_t, duration_t ) 
         >                                   write_to_t;
 
     // Buffer Guard

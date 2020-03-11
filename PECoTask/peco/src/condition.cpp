@@ -26,15 +26,16 @@ namespace pe {
         #else
             pipe(c_rw_);
         #endif
-            waiting_task_ = this_loop.do_job([this]() {
-                this_task::get_task()->reserved_flags.flag0 = 1;
+            waiting_task_ = loop::main.do_job([this]() {
+                this_task::set_user_flag0(1);
                 this->wait_();
             });
         }
         // Destory and cancel all waiting task
         dispatcher::~dispatcher( ) {
-            waiting_task_->reserved_flags.flag0 = 0;
-            this_loop.cancel_fd(c_rw_[0]);
+            task_set_user_flag0(waiting_task_, 0);
+            // waiting_task_->reserved_flags.flag0 = 0;
+            tasks_cancel_fd(c_rw_[0]);
         #if PZC_TARGET_LINUX
             ::close(c_rw_[0]);
         #else
@@ -43,18 +44,19 @@ namespace pe {
         #endif
             c_rw_[0] = -1;
             c_rw_[1] = -1;
-            while ( waiting_task_->reserved_flags.flag1 != 1 ) {
+            while ( task_get_user_flag0(waiting_task_) != 1 ) {
+            // while ( waiting_task_->reserved_flags.flag1 != 1 ) {
                 this_task::yield();
             }
         }
 
         void dispatcher::wait_() {
-            while ( this_task::get_task()->reserved_flags.flag0 ) {
-                while ( this_task::get_task()->reserved_flags.flag0 ) {
+            while ( this_task::get_user_flag0() ) {
+                while ( this_task::get_user_flag0() ) {
                     waiting_signals _sig = this_task::wait_fd_for_event(
                         c_rw_[0], event_read, std::chrono::milliseconds(100)
                     );
-                    if ( this_task::get_task()->reserved_flags.flag0 == 0 ) {
+                    if ( this_task::get_user_flag0() == 0 ) {
                         break;
                     }
                     if ( _sig == bad_signal ) {
@@ -87,7 +89,7 @@ namespace pe {
                 // Reset the notify flag
                 notify_flag_ = 0;
             }
-            this_task::get_task()->reserved_flags.flag1 = 1;
+            this_task::set_user_flag0(1);
         }
 
         // Wait for the event
@@ -97,12 +99,12 @@ namespace pe {
         }
         // Wait for the event until the timeout
         bool dispatcher::wait_until( std::chrono::nanoseconds t ) {
-            task *_ptask = this_task::get_task();
+            task_t _ptask = this_task::get_task();
             pending_tasks_[_ptask] = true;
             bool _r = this_task::holding_until(t);
-            if ( this_task::last_signal() == pe::co::no_signal ) {
+            if ( task_get_waiting_signal(_ptask) == pe::co::no_signal ) {
                 // Force to erase current task cause its timeout
-                pending_tasks_.erase(_ptask);
+                pending_tasks_.erase(this_task::get_task());
             }
             return _r;
         }
@@ -178,7 +180,7 @@ namespace pe {
                 );
                 if ( _sig == bad_signal ) {
                     // Bad Signal not because the semaphore been destoried
-                    if ( this_task::status() == task_status_stopped ) {
+                    if ( this_task::get_status() == task_status_stopped ) {
                         --c_ref_;
                     }
                     return false;
@@ -220,7 +222,7 @@ namespace pe {
                 --c_ref_;
             } else {
                 // Bad Signal not because the semaphore been destoried
-                if ( this_task::status() == task_status_stopped ) {
+                if ( this_task::get_status() == task_status_stopped ) {
                     --c_ref_;
                 }
             }
@@ -241,7 +243,7 @@ namespace pe {
         void semaphore::cancel() {
             if ( c_rw_[0] == -1 ) return;
 
-            this_loop.cancel_fd(c_rw_[0]);
+            tasks_cancel_fd(c_rw_[0]);
         #if PZC_TARGET_LINUX
             ::close(c_rw_[0]);
         #else

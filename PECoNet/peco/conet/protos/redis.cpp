@@ -429,7 +429,7 @@ namespace pe { namespace co { namespace net { namespace redis {
         if ( keepalive_ != NULL ) {
             task_exit(keepalive_);
         }
-        this_loop.do_job([this]() {
+        loop::main.do_job([this]() {
             tcpadapter _adapter;
             do {
                 parent_task::guard _pg;
@@ -479,7 +479,7 @@ namespace pe { namespace co { namespace net { namespace redis {
         });
         this_task::holding();
         cond_connected_.notify();
-        keepalive_ = this_loop.do_loop([this]() {
+        keepalive_ = loop::main.do_loop([this]() {
             this->connection_test();
         }, std::chrono::seconds(30));
     }
@@ -643,7 +643,7 @@ namespace pe { namespace co { namespace net { namespace redis {
             if ( !lcon_[i]->is_validate() ) {
                 // Try to re-connect
                 connector *_pc = lcon_[i];
-                this_loop.do_job([_pc, this]() {
+                loop::main.do_job([_pc, this]() {
                     if ( _pc->connect() ) {
                         command _c;
                         _c << "SELECT" << std::to_string(this->db_);
@@ -665,18 +665,18 @@ namespace pe { namespace co { namespace net { namespace redis {
     }
 
     // Subscribe
-    task * group::subscribe( 
+    task_t group::subscribe( 
         command&& cmd, 
         std::function< void (const std::string&, const std::string&) > cb
     ) {
         if ( cb == nullptr ) return NULL;
 
         // We need to create a new session
-        return this_loop.do_job([cmd, cb, this]() {
-            task *_tt = this_task::get_task();
-            _tt->reserved_flags.flag0 = 1;
-            while ( _tt->reserved_flags.flag0 == 1 ) {
-                _tt->arg = NULL;
+        return loop::main.do_job([cmd, cb, this]() {
+            task_t _tt = this_task::get_task();
+            task_set_user_flag1(_tt, 1);
+            while ( task_get_user_flag1(_tt) == 1 ) {
+                task_set_arg(_tt, NULL);
                 // Keep the connection alive
                 // reconnect when the socket has reach
                 // system's timeout and been dropped
@@ -694,10 +694,10 @@ namespace pe { namespace co { namespace net { namespace redis {
                 if ( _r.size() == 0 ) break;
 
                 // Set current loop's connection
-                _tt->arg = (void *)(_sconn.get());
+                task_set_arg(_tt, (void *)(_sconn.get()));
 
                 command _empty_cmd;
-                while ( _tt->reserved_flags.flag0 == 1 ) {
+                while ( task_get_user_flag1(_tt) == 1 ) {
                     auto _r = _sconn->query( std::move(_empty_cmd) );
                     // Connection closed
                     if ( _r.size() == 0 ) break;
@@ -724,12 +724,13 @@ namespace pe { namespace co { namespace net { namespace redis {
     }
 
     // Unsubscribe
-    void group::unsubscribe( task * subtask ) {
+    void group::unsubscribe( task_t subtask ) {
         if ( subtask == NULL ) return;
-        subtask->reserved_flags.flag0 = 0;
-        if ( subtask->arg == NULL ) return;
+        task_set_user_flag1(subtask, 0);
+        void* _arg = task_get_arg(subtask);
+        if ( _arg == NULL ) return;
         // Disconnect the connector if it's not null
-        ((connector *)(subtask->arg))->disconnect();
+        ((connector *)(_arg))->disconnect();
     }
 
     // Check the result of a redis query
