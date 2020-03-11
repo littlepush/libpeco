@@ -159,12 +159,13 @@ namespace pe {
         #endif
         }
 
-        task* __create_task( task_job_t job ) {
+        task* __inner_create_task( task_job_t job ) {
 
             // The task should be put on the heap
             task * _ptask = (task *)malloc(sizeof(task));
             _ptask->id = (intptr_t)(_ptask);
             _ptask->exitjob = NULL;
+            _ptask->refcount = 0;
 
             // Init the stack for the task
             // Get a 1MB Memory piece
@@ -265,14 +266,36 @@ namespace pe {
         #endif
         }
 
+        task* __create_task( task_job_t job ) {
+            task * _ptask = __inner_create_task(job);
+            ON_DEBUG_COTASK(
+                std::cout << "created a task: " << std::endl;
+                __task_debug_info(_ptask);
+            )
+
+            return _ptask;
+        }
+
         task* __create_task_with_fd( int fd, task_job_t job ) {
             task * _ptask = __create_task( job );
             _ptask->id = (intptr_t)fd;
             _ptask->is_event_id = true;
+
+            ON_DEBUG_COTASK(
+                std::cout << "created a task: " << std::endl;
+                __task_debug_info(_ptask);
+            )
+
             return _ptask;
         }
 
         void __destory_task( task * ptask ) {
+            if ( ptask->refcount > 0 ) return;
+            assert(ptask->refcount >= 0);
+            ON_DEBUG_COTASK(
+                std::cout << "destroy a task: " << std::endl;
+                __task_debug_info(ptask);
+            )
             if ( ptask->exitjob ) {
                 (*ptask->exitjob)();
                 delete ptask->exitjob;
@@ -304,6 +327,13 @@ namespace pe {
             if ( ptask->next_task != NULL ) {
                 ptask->next_task->prev_task = ptask->prev_task;
             }
+            // If I have a parent
+            if ( ptask->p_task != NULL ) {
+                // If im my parent's first child
+                if ( ptask->p_task->c_task == ptask ) { 
+                    ptask->p_task->c_task = ptask->next_task;
+                }
+            }
 
             #if !defined(PECO_USE_UCONTEXT) && !defined(PECO_USE_SIGUSR1)
             pthread_attr_destroy(&ptask->task_attr);
@@ -315,11 +345,13 @@ namespace pe {
 
 
 #define __INSERT_TASK( __KEY__, __ROOT__, __ATTR__ )                \
-        void __insert_##__KEY__##_task( task * ptask ) {     \
+        void __insert_##__KEY__##_task( task * ptask ) {            \
+            if ( ptask == NULL ) return;                            \
             do {                                                    \
             ptask->next_##__KEY__##_task = NULL;                    \
             if ( __ROOT__ == NULL ) { __ROOT__ = ptask;             \
-                __##__KEY__##_task_count += 1; break; }             \
+                __##__KEY__##_task_count += 1;                      \
+                ++ptask->refcount; break; }                         \
             task *_prev_task = NULL, *_cur_task = __ROOT__;         \
             while ( _cur_task != NULL ) {                           \
                 if ( _cur_task->__ATTR__ > ptask->__ATTR__) break;  \
@@ -329,6 +361,7 @@ namespace pe {
             if ( _prev_task == NULL ) { __ROOT__ = ptask; }         \
             else { _prev_task->next_##__KEY__##_task = ptask; }     \
             __##__KEY__##_task_count += 1;                          \
+            ++ptask->refcount;                                      \
             } while ( false );                                      \
             ON_DEBUG_COTASK(                                        \
                 std::cout << "after insert "#__KEY__" task: " <<    \
@@ -342,7 +375,8 @@ namespace pe {
                 std::cout << std::endl;)                            \
         }
 #define __REMOVE_TASK( __KEY__, __ROOT__ )                          \
-        void __remove_##__KEY__##_task( task* ptask ) {      \
+        void __remove_##__KEY__##_task( task* ptask ) {             \
+            if ( ptask == NULL ) return;                            \
             do {                                                    \
             task *_cur_task = __ROOT__, *_prev_task = NULL;         \
             if ( _cur_task == NULL ) break;                         \
@@ -358,6 +392,7 @@ namespace pe {
                 _cur_task = _cur_task->next_##__KEY__##_task; }     \
             while( _cur_task != NULL );                             \
             ptask->next_##__KEY__##_task = NULL;                    \
+            --ptask->refcount;                                      \
             __##__KEY__##_task_count -= 1;                          \
             } while ( false );                                      \
             ON_DEBUG_COTASK(                                        \
@@ -371,8 +406,15 @@ namespace pe {
                     _t = _t->next_##__KEY__##_task; }               \
                 std::cout << std::endl;)                            \
         }
+
+        /*
+            According to the next_key_task logic, one task may appeared
+            in two or more different task list, simply destroy each
+            task in the list will cause a double-free error
+            Fix: Add Reference Count!
+        */
 #define __CLEAR_TASK_LIST( __KEY__, __ROOT__ )                      \
-        void __clear_##__KEY__##_task_list() {               \
+        void __clear_##__KEY__##_task_list() {                      \
             while ( __ROOT__ != NULL ) {                            \
                 task *_ptask = __ROOT__;                            \
                 __ROOT__ = _ptask->next_##__KEY__##_task;           \
@@ -898,6 +940,7 @@ namespace pe {
             }
 
             fprintf(fp, "%*s|= id: %ld\n", lv * 4, "", ptask->id);
+            fprintf(fp, "%*s|= ref: %d\n", lv * 4, "", ptask->refcount);
             fprintf(fp, "%*s|= is_event: %s\n", lv * 4, "", (ptask->is_event_id ? "true" : "false"));
             fprintf(fp, "%*s|= stack: %s\n", lv * 4, "", pe::utils::ptr_str(ptask->stack).c_str());
             fprintf(fp, "%*s|= status: %s\n", lv * 4, "", 
@@ -914,8 +957,18 @@ namespace pe {
             } else {
                 fprintf(fp, "%*s|= repeat_count: %lu\n", lv * 4, "", ptask->repeat_count);
             }
-            fprintf(fp, "%*s|= flags0: %x\n", lv * 4, "", ptask->user_flag_mask0);
-            fprintf(fp, "%*s|= flags1: %x\n", lv * 4, "", ptask->user_flag_mask1);
+            fprintf(fp, "%*s|= flags0: %04x\n", lv * 4, "", ptask->user_flag_mask0);
+            fprintf(fp, "%*s|= flags1: %04x\n", lv * 4, "", ptask->user_flag_mask1);
+            fprintf(fp, "%*s|= first_child: %s\n", lv * 4, "", 
+                utils::ptr_str(ptask->c_task).c_str());
+            fprintf(fp, "%*s|= next_timed_task: %s\n", lv * 4, "", 
+                utils::ptr_str(ptask->next_timed_task).c_str());
+            fprintf(fp, "%*s|= next_read_task: %s\n", lv * 4, "", 
+                utils::ptr_str(ptask->next_read_task).c_str());
+            fprintf(fp, "%*s|= next_write_task: %s\n", lv * 4, "", 
+                utils::ptr_str(ptask->next_write_task).c_str());
+            fprintf(fp, "%*s|= next_timedout_task: %s\n", lv * 4, "", 
+                utils::ptr_str(ptask->next_timedout_task).c_str());
             fprintf(fp, "%*s|= exitjob: %s\n", lv * 4, "", utils::ptr_str(ptask->exitjob).c_str());
 
             if ( ptask->p_task != NULL ) {

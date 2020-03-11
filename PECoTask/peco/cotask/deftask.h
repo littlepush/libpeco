@@ -31,6 +31,8 @@ namespace pe {
             // The id of the task, usually is the address of the task
             // If we bind a file descriptor on this task, the id is the fd.
             task_id             id;
+            // Reference Count
+            int                 refcount;
             // Is event id
             bool                is_event_id;
             // The stack for the job
