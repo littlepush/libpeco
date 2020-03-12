@@ -41,8 +41,8 @@ namespace pe {
             process& operator << ( const std::string& arg );
 
             // Bind the output callback
-            output_t stdout;
-            output_t stderr;
+            output_t stdout_cb;
+            output_t stderr_cb;
 
             // Write input to the process
             void input( std::string&& data );

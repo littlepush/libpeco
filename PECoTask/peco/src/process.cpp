@@ -208,7 +208,7 @@ namespace pe {
                         std::string _buf = std::forward< std::string >(__pipe_read(_pid));
                         // Pipe closed
                         if ( _buf.size() == 0 ) break;
-                        if ( this->stdout ) this->stdout( std::move(_buf) );
+                        if ( this->stdout_cb ) this->stdout_cb( std::move(_buf) );
                     }
                 });
 
@@ -226,7 +226,7 @@ namespace pe {
                         std::string _buf = std::forward< std::string >(__pipe_read(_pid));
                         // Pipe closed
                         if ( _buf.size() == 0 ) break;
-                        if ( this->stderr ) this->stderr( std::move(_buf) );
+                        if ( this->stderr_cb ) this->stderr_cb( std::move(_buf) );
                     }
                 });
 
