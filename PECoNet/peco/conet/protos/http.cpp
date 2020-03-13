@@ -824,9 +824,11 @@ namespace pe { namespace co { namespace net {
     { }
     void http_response::write( std::string&& data ) {
         this->body_.append(std::move(data));
+        this_task::yield();
     }
     void http_response::write( const std::string& data ) {
         this->body_.append(data);
+        this_task::yield();
     }
 
     http_response& http_response::operator = ( const http_response& r ) {
