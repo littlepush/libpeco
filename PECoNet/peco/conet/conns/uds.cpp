@@ -245,9 +245,11 @@ namespace pe { namespace co { namespace net {
         if ( length == 0 ) return op_done;
         size_t _sent = 0;
         do {
+            // Single Package max size is 4k
+            int _single_pkg = std::min((size_t)(length - _sent), (size_t)(4 * 1024));
             int _ret = rawf::write(
                 (SOCKET_T)task_get_id(ptask),
-                data + _sent, length - _sent,
+                data + _sent, _single_pkg,
                 std::bind(::send,
                     std::placeholders::_1,
                     std::placeholders::_2,
