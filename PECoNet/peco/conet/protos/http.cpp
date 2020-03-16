@@ -484,18 +484,30 @@ namespace pe { namespace co { namespace net { namespace proto { namespace http {
     }
 
     void body_t::append( const std::string& data ) {
-        body_t::body_part_t _bp{
-            0,
-            ( is_gzipped ? utils::gzip_data(data) : data ) 
-        };
-        container.emplace_back( std::move(_bp) );
+        if ( is_gzipped ) {
+            container.emplace_back((body_t::body_part_t){
+                0, NULL, 0, utils::gzip_data(data)
+            });
+        } else {
+            container.emplace_back((body_t::body_part_t) {
+                0, data.c_str(), data.size(), ""
+            });
+        }
     }
     void body_t::append( const char* data, uint32_t length ) {
-        this->append( std::string(data, length) );
+        if ( is_gzipped ) {
+            container.emplace_back((body_t::body_part_t){
+                0, NULL, 0, utils::gzip_data(data, length)
+            });
+        } else {
+            container.emplace_back((body_t::body_part_t){
+                0, data, length, ""
+            });
+        }
     }
     void body_t::append( std::string&& data ) {
         body_t::body_part_t _bp{
-            0,
+            0, NULL, 0,
             ( is_gzipped ? utils::gzip_data(data) : std::move(data) )
         };
         container.emplace_back( std::move(_bp) );
@@ -503,8 +515,7 @@ namespace pe { namespace co { namespace net { namespace proto { namespace http {
     bool body_t::load_file( const std::string& path ) {
         if ( !utils::is_file_existed(path) ) return false;
         body_t::body_part_t _bp{
-            1,
-            path
+            1, NULL, 0, path
         };
         container.emplace_back( std::move(_bp) );
         return true;
@@ -516,7 +527,10 @@ namespace pe { namespace co { namespace net { namespace proto { namespace http {
         size_t _c = 0;
         for ( auto i = container.begin(); i != container.end(); ++i ) {
             // If the body part is string, add size
-            if ( i->f == 0 ) _c += i->ct.size();
+            if ( i->f == 0 ) {
+                if ( i->data != NULL ) _c += i->len;
+                else _c += i->ct.size();
+            }
             // If it is a file, calculate the file size
             if ( i->f == 1 ) {
                 // We do have the file and already loaded it
@@ -536,7 +550,13 @@ namespace pe { namespace co { namespace net { namespace proto { namespace http {
         if ( is_gzipped ) return;
         for ( auto& part : container ) {
             if ( part.f == 1 ) continue;
-            part.ct = pe::utils::gzip_data(part.ct);
+            if ( part.data != NULL ) {
+                part.ct = utils::gzip_data(part.data, part.len);
+                part.data = NULL;
+                part.len = 0;
+            } else {
+                part.ct = pe::utils::gzip_data(part.ct);
+            }
         }
     }
     // unset the flag and unpack the body data
@@ -544,7 +564,13 @@ namespace pe { namespace co { namespace net { namespace proto { namespace http {
         if ( !is_gzipped ) return;
         for ( auto& part : container ) {
             if ( part.f == 1 ) continue;
-            part.ct = pe::utils::gunzip_data(part.ct);
+            if ( part.data != NULL ) {
+                part.ct = utils::gunzip_data(part.data, part.len);
+                part.data = NULL;
+                part.len = 0;
+            } else {
+                part.ct = pe::utils::gzip_data(part.ct);
+            }
         }
     }
 
@@ -559,7 +585,11 @@ namespace pe { namespace co { namespace net { namespace proto { namespace http {
     // Get the chunk size
     std::string body_t::chunk_size( body_t::iterator cit ) {
         if ( cit->f == 0 ) {
-            return __decimal2hex( cit->ct.size() );
+            if ( cit->data == NULL ) {
+                return __decimal2hex( cit->ct.size() );
+            } else {
+                return __decimal2hex( cit->len );
+            }
         }
         if ( cit->f == 1 ) {
             if ( is_gzipped ) {
@@ -577,7 +607,11 @@ namespace pe { namespace co { namespace net { namespace proto { namespace http {
         std::string _raw;
         for ( auto _it = this->begin(); _it != this->end(); ++_it ) {
             if ( _it->f == 0 ) {
-                _raw += _it->ct;
+                if ( _it->data != NULL ) {
+                    _raw.append(_it->data, _it->len);
+                } else {
+                    _raw += _it->ct;
+                }
             } else {
                 if ( is_gzipped ) {
                     _raw += (utils::gzip_data(utils::file_cache::load_file(_it->ct)));
@@ -830,6 +864,14 @@ namespace pe { namespace co { namespace net {
         this->body_.append(data);
         this_task::yield();
     }
+    void http_response::write( const char* data ) {
+        this->body_.append(data, strlen(data));
+        this_task::yield();
+    }
+    void http_response::write( const char* data, size_t len ) {
+        this->body_.append(data, len);
+        this_task::yield();
+    }
 
     http_response& http_response::operator = ( const http_response& r ) {
         if ( this == &r ) return *this;
@@ -896,7 +938,11 @@ namespace pe { namespace co { namespace net {
                     adapter->write( b.chunk_size(ib) + "\r\n" );
                 }
                 if ( ib->f == 0 ) {
-                    adapter->write( ib->ct );                    
+                    if ( ib->data != NULL ) {
+                        adapter->write(ib->data, ib->len);
+                    } else {
+                        adapter->write(ib->ct);                    
+                    }
                 } else {
                     if ( b.is_gzipped ) {
                         adapter->write( utils::gzip_data(

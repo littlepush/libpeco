@@ -221,6 +221,8 @@ namespace pe { namespace co { namespace net { namespace proto { namespace http {
 
         typedef struct {
             int             f;
+            const char      *data;
+            size_t          len;
             std::string     ct;
         } body_part_t;
 
@@ -390,6 +392,8 @@ namespace pe { namespace co { namespace net {
         // append new data to the response's body
         void write( std::string&& data );
         void write( const std::string& data );
+        void write( const char* data );
+        void write( const char* data, size_t len );
 
         // Header and body reference
         version_t &         version;

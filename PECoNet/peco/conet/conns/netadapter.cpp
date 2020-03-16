@@ -219,13 +219,18 @@ namespace pe { namespace co { namespace net {
     bool tcpadapter::write( const std::string& data, duration_t timedout ) {
         return (op_done == tcp::write_to(t, data.c_str(), data.size(), timedout));
     }
-
+    bool tcpadapter::write( const char* data, size_t len, duration_t timedout) {
+        return (op_done == tcp::write_to(t, data, len, timedout) );
+    }
     // Direct write data without block
     bool tcpadapter::direct_write( std::string&& data, duration_t timedout ) {
         return (op_done == tcp::write_to(t, data.c_str(), data.size(), timedout) );
     }
     bool tcpadapter::direct_write( const std::string& data, duration_t timedout ) {
         return (op_done == tcp::write_to(t, data.c_str(), data.size(), timedout) );
+    }
+    bool tcpadapter::direct_write( const char* data, size_t len, duration_t timedout) {
+        return (op_done == tcp::write_to(t, data, len, timedout) );
     }
 
     // Wait for data
@@ -249,12 +254,18 @@ namespace pe { namespace co { namespace net {
     bool tcp_serveradapter::write( const std::string& data, duration_t timedout ) {
         return op_done == tcp::write_to(t_, data.c_str(), data.size(), timedout);
     }
+    bool tcp_serveradapter::write( const char* data, size_t len, duration_t timedout) {
+        return (op_done == tcp::write_to(t_, data, len, timedout) );
+    }
     // Direct write data without block
     bool tcp_serveradapter::direct_write( std::string&& data, duration_t timedout ) {
-        return this->write(std::move(data), timedout);
+        return op_done == tcp::write_to(t_, data.c_str(), data.size(), timedout);
     }
     bool tcp_serveradapter::direct_write( const std::string& data, duration_t timedout ) {
-        return this->write(data, timedout);
+        return op_done == tcp::write_to(t_, data.c_str(), data.size(), timedout);
+    }
+    bool tcp_serveradapter::direct_write( const char* data, size_t len, duration_t timedout) {
+        return (op_done == tcp::write_to(t_, data, len, timedout) );
     }
 
     // Wait for data
@@ -301,12 +312,18 @@ namespace pe { namespace co { namespace net {
     bool ssladapter::write( const std::string& data, duration_t timedout ) {
         return (op_done == ssl::write_to(t, data.c_str(), data.size(), timedout) );
     }
+    bool ssladapter::write( const char* data, size_t len, duration_t timedout) {
+        return (op_done == ssl::write_to(t, data, len, timedout) );
+    }
     // Direct write data without block
     bool ssladapter::direct_write( std::string&& data, duration_t timedout ) {
         return (op_done == ssl::write_to(t, data.c_str(), data.size(), timedout) );
     }
     bool ssladapter::direct_write( const std::string& data, duration_t timedout ) {
         return (op_done == ssl::write_to(t, data.c_str(), data.size(), timedout) );
+    }
+    bool ssladapter::direct_write( const char* data, size_t len, duration_t timedout) {
+        return (op_done == ssl::write_to(t, data, len, timedout) );
     }
 
     // Wait for data
@@ -331,12 +348,17 @@ namespace pe { namespace co { namespace net {
     bool ssl_serveradapter::write( const std::string& data, duration_t timedout ) {
         return op_done == ssl::write_to(t_, data.c_str(), data.size(), timedout);
     }
-
+    bool ssl_serveradapter::write( const char* data, size_t len, duration_t timedout) {
+        return (op_done == ssl::write_to(t_, data, len, timedout) );
+    }
     bool ssl_serveradapter::direct_write( std::string&& data, duration_t timedout ) {
-        return this->write( std::move(data), timedout );
+        return op_done == ssl::write_to(t_, data.c_str(), data.size(), timedout);
     }
     bool ssl_serveradapter::direct_write( const std::string& data, duration_t timedout ) {
-        return this->write( data, timedout );
+        return op_done == ssl::write_to(t_, data.c_str(), data.size(), timedout);
+    }
+    bool ssl_serveradapter::direct_write( const char* data, size_t len, duration_t timedout) {
+        return (op_done == ssl::write_to(t_, data, len, timedout) );
     }
 
     // Wait for data
@@ -375,11 +397,17 @@ namespace pe { namespace co { namespace net {
     bool udpadapter::write( const std::string& data, duration_t timedout ) {
         return op_done == udp::write_to(t, data.c_str(), data.size(), this->peer_addr, timedout);
     }
+    bool udpadapter::write( const char* data, size_t len, duration_t timedout) {
+        return op_done == udp::write_to(t, data, len, this->peer_addr, timedout);
+    }
     bool udpadapter::direct_write( std::string && data, duration_t timedout ) {
         return op_done == udp::write_to(t, data.c_str(), data.size(), this->peer_addr, timedout);
     }
     bool udpadapter::direct_write( const std::string & data, duration_t timedout ) {
         return op_done == udp::write_to(t, data.c_str(), data.size(), this->peer_addr, timedout);
+    }
+    bool udpadapter::direct_write( const char* data, size_t len, duration_t timedout) {
+        return op_done == udp::write_to(t, data, len, this->peer_addr, timedout);
     }
 
     // Wait for data
@@ -417,11 +445,17 @@ namespace pe { namespace co { namespace net {
     bool udsadapter::write( const std::string& data, duration_t timedout ) {
         return op_done == uds::write_to(t, data.c_str(), data.size(), timedout);
     }
+    bool udsadapter::write( const char* data, size_t len, duration_t timedout) {
+        return op_done == uds::write_to(t, data, len, timedout);
+    }
     bool udsadapter::direct_write( std::string&& data, duration_t timedout ) {
         return op_done == uds::write_to(t, data.c_str(), data.size(), timedout);
     }
     bool udsadapter::direct_write( const std::string& data, duration_t timedout ) {
         return op_done == uds::write_to(t, data.c_str(), data.size(), timedout);
+    }
+    bool udsadapter::direct_write( const char* data, size_t len, duration_t timedout) {
+        return op_done == uds::write_to(t, data, len, timedout);
     }
 
     // Wait for data
@@ -441,16 +475,22 @@ namespace pe { namespace co { namespace net {
 
     // Write Data
     bool uds_serveradapter::write( std::string&& data, duration_t timedout ) {
-        return uds::write_to( t_, data.c_str(), data.size(), timedout ) == op_done;
+        return op_done == uds::write_to( t_, data.c_str(), data.size(), timedout );
     }
     bool uds_serveradapter::write( const std::string& data, duration_t timedout ) {
-        return uds::write_to( t_, data.c_str(), data.size(), timedout ) == op_done;
+        return op_done == uds::write_to( t_, data.c_str(), data.size(), timedout );
+    }
+    bool uds_serveradapter::write( const char* data, size_t len, duration_t timedout) {
+        return op_done == uds::write_to(t_, data, len, timedout);
     }
     bool uds_serveradapter::direct_write( std::string&& data, duration_t timedout ) {
-        return this->write(std::move(data), timedout);
+        return op_done == uds::write_to( t_, data.c_str(), data.size(), timedout );
     }
     bool uds_serveradapter::direct_write( const std::string& data, duration_t timedout ) {
-        return this->write(data, timedout);
+        return op_done == uds::write_to( t_, data.c_str(), data.size(), timedout );
+    }
+    bool uds_serveradapter::direct_write( const char* data, size_t len, duration_t timedout) {
+        return op_done == uds::write_to(t_, data, len, timedout);
     }
 
     // Wait for data
@@ -497,12 +537,17 @@ namespace pe { namespace co { namespace net {
     bool socks5adapter::write( const std::string& data, duration_t timedout ) {
         return op_done == socks5::write_to(t, data.c_str(), data.size(), timedout );
     }
-
+    bool socks5adapter::write( const char* data, size_t len, duration_t timedout) {
+        return op_done == socks5::write_to(t, data, len, timedout);
+    }
     bool socks5adapter::direct_write( std::string&& data, duration_t timedout ) {
         return op_done == socks5::write_to(t, data.c_str(), data.size(), timedout );
     }
     bool socks5adapter::direct_write( const std::string& data, duration_t timedout ) {
         return op_done == socks5::write_to(t, data.c_str(), data.size(), timedout );
+    }
+    bool socks5adapter::direct_write( const char* data, size_t len, duration_t timedout) {
+        return op_done == socks5::write_to(t, data, len, timedout);
     }
 
     // Wait for data
@@ -527,11 +572,17 @@ namespace pe { namespace co { namespace net {
     bool socks5_serveradapter::write( const std::string& data, duration_t timedout ) {
         return op_done == socks5::write_to(t_, data.c_str(), data.size(), timedout );
     }
+    bool socks5_serveradapter::write( const char* data, size_t len, duration_t timedout) {
+        return op_done == socks5::write_to(t_, data, len, timedout);
+    }
     bool socks5_serveradapter::direct_write( std::string&& data, duration_t timedout ) {
-        return this->write(std::move(data), timedout);
+        return op_done == socks5::write_to(t_, data.c_str(), data.size(), timedout );
     }
     bool socks5_serveradapter::direct_write( const std::string& data, duration_t timedout ) {
-        return this->write(data, timedout);
+        return op_done == socks5::write_to(t_, data.c_str(), data.size(), timedout );
+    }
+    bool socks5_serveradapter::direct_write( const char* data, size_t len, duration_t timedout) {
+        return op_done == socks5::write_to(t_, data, len, timedout);
     }
 
     // Wait for data
@@ -589,11 +640,17 @@ namespace pe { namespace co { namespace net {
     bool socks5sadapter::write( const std::string& data, duration_t timedout ) {
         return op_done == ssl::write_to(t, data.c_str(), data.size(), timedout);
     }
+    bool socks5sadapter::write( const char* data, size_t len, duration_t timedout) {
+        return op_done == ssl::write_to(t, data, len, timedout);
+    }
     bool socks5sadapter::direct_write( std::string&& data, duration_t timedout ) {
         return op_done == ssl::write_to(t, data.c_str(), data.size(), timedout);
     }
     bool socks5sadapter::direct_write( const std::string& data, duration_t timedout ) {
         return op_done == ssl::write_to(t, data.c_str(), data.size(), timedout);
+    }
+    bool socks5sadapter::direct_write( const char* data, size_t len, duration_t timedout) {
+        return op_done == ssl::write_to(t, data, len, timedout);
     }
 
     // Wait for data

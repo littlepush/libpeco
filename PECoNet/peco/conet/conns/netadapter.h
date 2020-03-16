@@ -47,10 +47,12 @@ namespace pe { namespace co { namespace net {
         // Write Data
         virtual bool write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT ) = 0;
         virtual bool write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT ) = 0;
+        virtual bool write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT ) = 0;
 
         // Direct write data without block
         virtual bool direct_write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT ) = 0;
         virtual bool direct_write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT ) = 0;
+        virtual bool direct_write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT ) = 0;
 
         // Wait for data
         virtual data_type read( duration_t timedout = NET_DEFAULT_TIMEOUT ) = 0;
@@ -123,10 +125,12 @@ namespace pe { namespace co { namespace net {
         // Write Data
         virtual bool write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Direct write data without block
         virtual bool direct_write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool direct_write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool direct_write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Wait for data
         virtual iadapter::data_type read( duration_t timedout = NET_DEFAULT_TIMEOUT );
@@ -139,10 +143,12 @@ namespace pe { namespace co { namespace net {
         // Write Data
         virtual bool write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Direct write data without block
         virtual bool direct_write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool direct_write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool direct_write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Wait for data
         virtual iadapter::data_type read( duration_t timedout = NET_DEFAULT_TIMEOUT );
@@ -162,10 +168,12 @@ namespace pe { namespace co { namespace net {
         // Write Data
         virtual bool write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Direct write data without block
         virtual bool direct_write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool direct_write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool direct_write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Wait for data
         virtual iadapter::data_type read( duration_t timedout = NET_DEFAULT_TIMEOUT );
@@ -178,10 +186,12 @@ namespace pe { namespace co { namespace net {
         // Write Data
         virtual bool write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Direct write data without block
         virtual bool direct_write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool direct_write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool direct_write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Wait for data
         virtual iadapter::data_type read( duration_t timedout = NET_DEFAULT_TIMEOUT );
@@ -202,10 +212,12 @@ namespace pe { namespace co { namespace net {
         // Write Data
         virtual bool write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Direct write data without block
         virtual bool direct_write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool direct_write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool direct_write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Wait for data
         virtual iadapter::data_type read( duration_t timedout = NET_DEFAULT_TIMEOUT );
@@ -224,10 +236,12 @@ namespace pe { namespace co { namespace net {
         // Write Data
         virtual bool write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Direct write data without block
         virtual bool direct_write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool direct_write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool direct_write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Wait for data
         virtual iadapter::data_type read( duration_t timedout = NET_DEFAULT_TIMEOUT );
@@ -240,10 +254,12 @@ namespace pe { namespace co { namespace net {
         // Write Data
         virtual bool write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Direct write data without block
         virtual bool direct_write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool direct_write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool direct_write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Wait for data
         virtual iadapter::data_type read( duration_t timedout = NET_DEFAULT_TIMEOUT );
@@ -263,10 +279,12 @@ namespace pe { namespace co { namespace net {
         // Write Data
         virtual bool write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Direct write data without block
         virtual bool direct_write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool direct_write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool direct_write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Wait for data
         virtual iadapter::data_type read( duration_t timedout = NET_DEFAULT_TIMEOUT );
@@ -279,10 +297,12 @@ namespace pe { namespace co { namespace net {
         // Write Data
         virtual bool write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Direct write data without block
         virtual bool direct_write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool direct_write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool direct_write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Wait for data
         virtual iadapter::data_type read( duration_t timedout = NET_DEFAULT_TIMEOUT );
@@ -303,10 +323,12 @@ namespace pe { namespace co { namespace net {
         // Write Data
         virtual bool write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Direct write data without block
         virtual bool direct_write( std::string&& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
         virtual bool direct_write( const std::string& data, duration_t timedout = NET_DEFAULT_TIMEOUT );
+        virtual bool direct_write( const char* data, size_t len, duration_t timedout = NET_DEFAULT_TIMEOUT );
 
         // Wait for data
         virtual iadapter::data_type read( duration_t timedout = NET_DEFAULT_TIMEOUT );
