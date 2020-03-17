@@ -221,8 +221,6 @@ namespace pe { namespace co { namespace net { namespace proto { namespace http {
 
         typedef struct {
             int             f;
-            const char      *data;
-            size_t          len;
             std::string     ct;
         } body_part_t;
 

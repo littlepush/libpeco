@@ -484,39 +484,27 @@ namespace pe { namespace co { namespace net { namespace proto { namespace http {
     }
 
     void body_t::append( const std::string& data ) {
-        if ( is_gzipped ) {
-            container.emplace_back((body_t::body_part_t){
-                0, NULL, 0, utils::gzip_data(data)
-            });
-        } else {
-            container.emplace_back((body_t::body_part_t) {
-                0, data.c_str(), data.size(), ""
-            });
+        if ( container.size() > 0 ) {
+            auto _r = container.rbegin();
+            if ( _r->ct.size() + data.size() < 1024 ) {
+                _r->ct.append(data);
+                return;
+            }
         }
+        container.emplace_back((body_t::body_part_t) {0, data});
     }
     void body_t::append( const char* data, uint32_t length ) {
-        if ( is_gzipped ) {
-            container.emplace_back((body_t::body_part_t){
-                0, NULL, 0, utils::gzip_data(data, length)
-            });
-        } else {
-            container.emplace_back((body_t::body_part_t){
-                0, data, length, ""
-            });
-        }
+        this->append(std::string(data, length));
     }
     void body_t::append( std::string&& data ) {
         body_t::body_part_t _bp{
-            0, NULL, 0,
-            ( is_gzipped ? utils::gzip_data(data) : std::move(data) )
+            0, std::move(data)
         };
         container.emplace_back( std::move(_bp) );
     }
     bool body_t::load_file( const std::string& path ) {
         if ( !utils::is_file_existed(path) ) return false;
-        body_t::body_part_t _bp{
-            1, NULL, 0, path
-        };
+        body_t::body_part_t _bp{1, path};
         container.emplace_back( std::move(_bp) );
         return true;
     }
@@ -528,8 +516,7 @@ namespace pe { namespace co { namespace net { namespace proto { namespace http {
         for ( auto i = container.begin(); i != container.end(); ++i ) {
             // If the body part is string, add size
             if ( i->f == 0 ) {
-                if ( i->data != NULL ) _c += i->len;
-                else _c += i->ct.size();
+                _c += i->ct.size();
             }
             // If it is a file, calculate the file size
             if ( i->f == 1 ) {
@@ -547,31 +534,11 @@ namespace pe { namespace co { namespace net { namespace proto { namespace http {
     // If the flag is already gzipped, do nothing
     // else, gzipped the data, and set the flag
     void body_t::gzip() {
-        if ( is_gzipped ) return;
-        for ( auto& part : container ) {
-            if ( part.f == 1 ) continue;
-            if ( part.data != NULL ) {
-                part.ct = utils::gzip_data(part.data, part.len);
-                part.data = NULL;
-                part.len = 0;
-            } else {
-                part.ct = pe::utils::gzip_data(part.ct);
-            }
-        }
+        is_gzipped = true;
     }
     // unset the flag and unpack the body data
     void body_t::gunzip() {
-        if ( !is_gzipped ) return;
-        for ( auto& part : container ) {
-            if ( part.f == 1 ) continue;
-            if ( part.data != NULL ) {
-                part.ct = utils::gunzip_data(part.data, part.len);
-                part.data = NULL;
-                part.len = 0;
-            } else {
-                part.ct = pe::utils::gzip_data(part.ct);
-            }
-        }
+        is_gzipped = false;
     }
 
     body_t::iterator body_t::begin() noexcept { return container.begin(); }
@@ -585,20 +552,10 @@ namespace pe { namespace co { namespace net { namespace proto { namespace http {
     // Get the chunk size
     std::string body_t::chunk_size( body_t::iterator cit ) {
         if ( cit->f == 0 ) {
-            if ( cit->data == NULL ) {
-                return __decimal2hex( cit->ct.size() );
-            } else {
-                return __decimal2hex( cit->len );
-            }
+            return __decimal2hex( cit->ct.size() );
         }
         if ( cit->f == 1 ) {
-            if ( is_gzipped ) {
-                return __decimal2hex(
-                    utils::gzip_data( utils::file_cache::load_file(cit->ct) ).size()
-                );
-            } else {
-                return __decimal2hex( utils::file_cache::load_file(cit->ct).size() );
-            }
+            return __decimal2hex( utils::file_cache::load_file(cit->ct).size() );
         }
         return "0\r\n\r\n";
     }
@@ -607,17 +564,9 @@ namespace pe { namespace co { namespace net { namespace proto { namespace http {
         std::string _raw;
         for ( auto _it = this->begin(); _it != this->end(); ++_it ) {
             if ( _it->f == 0 ) {
-                if ( _it->data != NULL ) {
-                    _raw.append(_it->data, _it->len);
-                } else {
-                    _raw += _it->ct;
-                }
+                _raw += _it->ct;
             } else {
-                if ( is_gzipped ) {
-                    _raw += (utils::gzip_data(utils::file_cache::load_file(_it->ct)));
-                } else {
-                    _raw += utils::file_cache::load_file(_it->ct);
-                }
+                _raw += utils::file_cache::load_file(_it->ct);
             }
         }
         return _raw;
@@ -911,15 +860,21 @@ namespace pe { namespace co { namespace net {
             std::string& buf, header_t& h, body_t& b 
         ) {
             // Calculate the body's size
-            std::string _content_encoding;
-            std::vector< std::string > _ct;
-            if ( b.is_gzipped ) _ct.push_back("gzip");
-            if ( b.is_chunked ) _ct.push_back("chunked");
-            if ( _ct.size() > 0 ) { 
-                h["Transfer-Encoding"] = pe::utils::join(_ct.begin(), _ct.end(), ","); 
+            std::string _temp;
+            if ( b.is_chunked ) {
+                h["Transfer-Encoding"] = "chunked";
+            }
+            if ( b.is_gzipped ) {
+                h["Content-Encoding"] = "gzip";
+                _temp = b.raw();
+                _temp = utils::gzip_data( _temp );
             }
             if ( !b.is_chunked ) {
-                h["Content-Length"] = std::to_string(b.calculate_size());
+                if ( b.is_gzipped ) {
+                    h["Content-Length"] = std::to_string(_temp.size());
+                } else {
+                    h["Content-Length"] = std::to_string(b.calculate_size());
+                }
             }
 
             h >> buf;
@@ -931,31 +886,37 @@ namespace pe { namespace co { namespace net {
             // Write the header
             adapter->write( buf );
 
+            if ( !b.is_chunked && b.is_gzipped ) {
+                // All data is in _temp
+                adapter->write(std::move(_temp));
+                return;
+            }
+
             // Write the body according to the content length or chunk parts
-            for ( auto ib = b.begin(); ib != b.end(); ++ib ) {
-                if ( ib->ct.size() == 0 ) continue;
-                if ( b.is_chunked ) {
-                    adapter->write( b.chunk_size(ib) + "\r\n" );
-                }
-                if ( ib->f == 0 ) {
-                    if ( ib->data != NULL ) {
-                        adapter->write(ib->data, ib->len);
-                    } else {
-                        adapter->write(ib->ct);                    
+            if ( ! b.is_gzipped ) {
+                for ( auto ib = b.begin(); ib != b.end(); ++ib ) {
+                    if ( ib->ct.size() == 0 ) continue;
+                    const std::string& _piece = (ib->f == 0 ? ib->ct : utils::file_cache::load_file(ib->ct));
+
+                    if ( b.is_chunked ) {
+                        adapter->write( __decimal2hex(_piece.size()) + "\r\n" );
                     }
-                } else {
-                    if ( b.is_gzipped ) {
-                        adapter->write( utils::gzip_data(
-                            utils::file_cache::load_file(ib->ct)
-                        ));
-                    } else {
-                        adapter->write( utils::file_cache::load_file(ib->ct));
+                    adapter->write(_piece);
+                    if ( b.is_chunked ) {
+                        adapter->write("\r\n");
                     }
+                    this_task::yield();
                 }
-                if ( b.is_chunked ) {
-                    adapter->write("\r\n");
+            } else {
+                size_t _sent = 0;
+                for ( ; _sent + 4096 < _temp.size(); _sent += 4096 ) {
+                    adapter->write( __decimal2hex(4096) + "\r\n" );
+                    adapter->write( _temp.c_str() + _sent, 4096 );
+                    adapter->write( "\r\n" );
                 }
-                // this_task::yield();
+                adapter->write( __decimal2hex(_temp.size() - _sent) + "\r\n" );
+                adapter->write( _temp.c_str() + _sent, _temp.size() - _sent );
+                adapter->write( "\r\n" );
             }
             if ( b.is_chunked ) {
                 adapter->write("0\r\n\r\n");   // END of CHUNK
