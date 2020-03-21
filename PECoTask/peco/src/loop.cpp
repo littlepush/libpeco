@@ -1018,6 +1018,19 @@ namespace pe {
             }
             __cancel_monitor(_ptask);
         }
+
+        // Exit all child task
+        void task_recurse_exit( task_t ptask ) {
+            task *_ptask = (task *)ptask;
+            task *_ctask = _ptask->c_task;
+            while ( _ctask != NULL ) {
+                task_recurse_exit((task_t)_ctask);
+                _ctask = _ctask->next_task;
+            }
+            // Exit self
+            task_exit(ptask);
+        }
+
         // Get task's ID
         task_id task_get_id( task_t ptask ) {
             task *_ptask = (task *)ptask;
@@ -1100,6 +1113,11 @@ namespace pe {
                 if ( __running_task == NULL ) return 0;
                 return __running_task->id;
             }
+            // Recurse Exit
+            void recurse_exit() {
+                task_recurse_exit( (task_t)__running_task );
+            }
+
             // Set/Get Task Argument
             void set_arg( void * arg ) {
                 if ( __running_task == NULL ) return;

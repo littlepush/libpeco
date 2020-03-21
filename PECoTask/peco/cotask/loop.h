@@ -222,6 +222,9 @@ namespace pe {
         // Stop a task's holding, make 'holding' return false
         void task_stop( task_t ptask );
 
+        // Exit all children and self
+        void task_recurse_exit( task_t ptask );
+
         // Get task's ID
         task_id task_get_id( task_t ptask );
 
@@ -287,6 +290,9 @@ namespace pe {
 
             // Get the task id
             task_id get_id();
+
+            // Recurse Exit
+            void recurse_exit();
 
             // Set/Get Task Argument
             void set_arg( void * arg );
