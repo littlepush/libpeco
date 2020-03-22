@@ -76,6 +76,7 @@ namespace pe {
         __thread_attr int 					    __core_fd = -1;
         __thread_attr core_event_t *              __core_events = NULL;
 
+        __thread_attr task *      __free_task = NULL;
         __thread_attr task *      __running_task = NULL;
         __thread_attr task *      __timed_task_root = NULL;
         __thread_attr task *      __read_task_root = NULL;
@@ -160,19 +161,25 @@ namespace pe {
         }
 
         task* __inner_create_task( task_job_t job ) {
+            task *_ptask = NULL;
+            if ( __free_task != NULL ) {
+                _ptask = __free_task;
+                __free_task = __free_task->next_task;
+                // Copy the job
+                *_ptask->pjob = job;
+            } else {
+                // The task should be put on the heap
+                _ptask = (task *)malloc(sizeof(task));
 
-            // The task should be put on the heap
-            task * _ptask = (task *)malloc(sizeof(task));
+                // Init the stack for the task
+                // Get a 1MB Memory piece
+                _ptask->stack = (stack_ptr)malloc(TASK_STACK_SIZE);
+                // Save the job on heap
+                _ptask->pjob = new task_job_t(job);
+            }
             _ptask->id = (intptr_t)(_ptask);
             _ptask->exitjob = NULL;
             _ptask->refcount = 0;
-
-            // Init the stack for the task
-            // Get a 1MB Memory piece
-            _ptask->stack = (stack_ptr)malloc(TASK_STACK_SIZE);
-
-            // Save the job on heap
-            _ptask->pjob = new task_job_t(job);
 
         #ifdef PECO_USE_UCONTEXT
             // Init the context
@@ -301,17 +308,21 @@ namespace pe {
                 delete ptask->exitjob;
                 ptask->exitjob = NULL;
             }
-            delete ptask->pjob;
+            *ptask->pjob = nullptr;
+            // delete ptask->pjob;
             if ( ptask->hold_sig[0] != -1 ) {
                 ::close(ptask->hold_sig[0]);
+                ptask->hold_sig[0] = -1;
             }
             if ( ptask->hold_sig[1] != -1 ) {
                 ::close(ptask->hold_sig[1]);
+                ptask->hold_sig[1] = -1;
             }
             if ( ptask->is_event_id ) {
                 ::close(ptask->id);
+                ptask->id = -1;
             }
-            free(ptask->stack);
+            // free(ptask->stack);
 
             // Clean the relationship
             while ( ptask->c_task != NULL ) {
@@ -339,7 +350,11 @@ namespace pe {
             pthread_attr_destroy(&ptask->task_attr);
             #endif
 
-            free(ptask);
+            // free(ptask);
+            // Put to the free list
+            ptask->next_task = __free_task;
+            __free_task = ptask;
+
             __all_task_count -= 1;
         }
 

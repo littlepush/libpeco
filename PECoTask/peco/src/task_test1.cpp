@@ -35,20 +35,20 @@ int main( int argc, char* argv[] ) {
     //     });
     // }
 
-    // pe::utils::sys::update_sysinfo();
-    // std::cout << "CPU Count: " << pe::utils::sys::cpu_count() << std::endl;
-    // std::cout << "Total Memory: " << pe::utils::sys::total_memory() << std::endl;
+    pe::utils::sys::update_sysinfo();
+    std::cout << "CPU Count: " << pe::utils::sys::cpu_count() << std::endl;
+    std::cout << "Total Memory: " << pe::utils::sys::total_memory() << std::endl;
 
-    // this_loop.do_loop([]() {
-    //     pe::utils::sys::update_sysinfo();
-    //     std::cout << "CPU Loads: " << pe::utils::join(
-    //         pe::utils::sys::cpu_loads(), " ") << std::endl;
-    //     std::cout << "CPU Usage: " << pe::utils::sys::cpu_usage() << std::endl;
-    //     std::cout << "Memory Usage: " << pe::utils::sys::memory_usage() << std::endl;
-    // }, std::chrono::seconds(1));
-    // this_loop.do_loop([]() {
-    //     std::cout << time(NULL) << std::endl;
-    // }, std::chrono::milliseconds(1000));
+    this_loop.do_loop([]() {
+        pe::utils::sys::update_sysinfo();
+        std::cout << "CPU Loads: " << pe::utils::join(
+            pe::utils::sys::cpu_loads(), " ") << std::endl;
+        std::cout << "CPU Usage: " << pe::utils::sys::cpu_usage() << std::endl;
+        std::cout << "Memory Usage: " << pe::utils::sys::memory_usage() << std::endl;
+    }, std::chrono::seconds(1));
+    this_loop.do_loop([]() {
+        std::cout << time(NULL) << std::endl;
+    }, std::chrono::milliseconds(1000));
 
     // this_loop.do_job([]() {
     //     while ( true ) {
@@ -57,16 +57,15 @@ int main( int argc, char* argv[] ) {
     //     }
     // });
 
-    // this_loop.do_job([]() {
-    //     std::cout << "hold jot at: " << time(NULL) << std::endl;
-    //     pe::co::other_task _ot = pe::co::this_task::wrapper();
-    //     this_loop.do_delay([_ot]() {
-    //         std::cout << "delay job done" << std::endl;
-    //         _ot.go_on();
-    //     }, std::chrono::seconds(5));
-    //     pe::co::this_task::holding();
-    //     std::cout << "job goon at: " << time(NULL) << std::endl;
-    // });
+    this_loop.do_job([]() {
+        std::cout << "hold jot at: " << time(NULL) << std::endl;
+        this_loop.do_delay([]() {
+            parent_task::guard _pg;
+            std::cout << "delay job done" << std::endl;
+        }, std::chrono::seconds(5));
+        pe::co::this_task::holding();
+        std::cout << "job goon at: " << time(NULL) << std::endl;
+    });
 
     // this_loop.do_job([]() {
 
