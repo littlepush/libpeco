@@ -650,7 +650,7 @@ namespace pe {
             task *_wtask = __search_task_by_fd(__write_task_root, fd);
             if ( _wtask != NULL ) {
                 __remove_write_task(_wtask);
-                _rtask->write_until = task_time_now();
+                _wtask->write_until = task_time_now();
                 __insert_write_task(_wtask);
             }
         }
