@@ -166,6 +166,7 @@ namespace pe {
 
         // Check the count or wait until it is bigger than 0
         bool semaphore::fetch() {
+            if ( c_rw_[0] == -1 ) return false;
             // Direct return if the count is greater than 0
             if ( c_count_ > 0 ) {
                 --c_count_; return true;
@@ -201,6 +202,7 @@ namespace pe {
 
         // Check the count or wait some time
         bool semaphore::fetch_until( std::chrono::nanoseconds t ) {
+            if ( c_rw_[0] == -1 ) return false;
             // Direct return if the count is greater than 0
             if ( c_count_ > 0 ) {
                 --c_count_; return true;
@@ -231,6 +233,7 @@ namespace pe {
 
         // Give a signal and increase the count
         void semaphore::give() {
+            if ( c_rw_[0] == -1 ) return;
             ++c_count_;
             // If no one is pending, do not need to send any signal
             if ( c_ref_ == 0 ) return;
