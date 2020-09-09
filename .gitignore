@@ -39,4 +39,4 @@ aclocal.m4
 *.deps
 libtool
 .dirstamp
-*.build
+*build*

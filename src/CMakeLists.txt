@@ -34,3 +34,18 @@ set(LIBPECO_PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/peco.h;${PECO_PECO_PUBLIC
 
 # Add Source
 add_subdirectory(peco)
+
+# Config for install
+set(LIBPECO_PUBLIC_HEADERS 
+    ${LIBPECO_PUBLIC_HEADER} 
+    ${LIBPECO_COTASK_PUBLIC} 
+    ${LIBPECO_CONET_PUBLIC} 
+    ${LIBPECO_CORLOG_PUBLIC} 
+    ${LIBPECO_UTILS_PUBLIC})
+
+install(TARGETS peco)
+foreach(header ${LIBPECO_PUBLIC_HEADERS})
+    file(RELATIVE_PATH relative_file "${CMAKE_CURRENT_SOURCE_DIR}" ${header})
+    get_filename_component(dir "${relative_file}" PATH)
+    install(FILES ${header} DESTINATION "include/${dir}")
+endforeach()
