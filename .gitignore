@@ -40,3 +40,4 @@ aclocal.m4
 libtool
 .dirstamp
 *build*
+.vscode

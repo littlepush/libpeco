@@ -64,6 +64,7 @@
 #include <chrono>
 #include <functional>
 #include <peco/utils/mustd.hpp>
+#include <peco/utils/weak.h>
 
 // The max cocurrent socket events. change this in the make file with -DCO_MAX_SO_EVENTS=xxx
 #ifndef CO_MAX_SO_EVENTS
@@ -88,335 +89,295 @@
 #endif
 
 namespace pe {
-    namespace co {
+namespace co {
 
 #ifdef DEBUG
-    void enable_cotask_trace();
-    bool is_cotask_trace_enabled();
+void enable_cotask_trace();
+bool is_cotask_trace_enabled();
 
-    #define ON_DEBUG_COTASK(...)    if ( is_cotask_trace_enabled() ) { __VA_ARGS__ }
+#define ON_DEBUG_COTASK(...)    if ( is_cotask_trace_enabled() ) { __VA_ARGS__ }
 #else
-    #define ON_DEBUG_COTASK(...)
+#define ON_DEBUG_COTASK(...)
 #endif
 
-    #if __APPLE__
-        typedef struct kevent               core_event_t;
-    #else
-        typedef struct epoll_event          core_event_t;
-    #endif    
+#if __APPLE__
+typedef struct kevent               core_event_t;
+#else
+typedef struct epoll_event          core_event_t;
+#endif    
 
-    #ifdef ENABLE_THREAD_LOOP
-    #define __thread_attr                   thread_local
-    #else
-    #define __thread_attr
-    #endif
+#ifdef ENABLE_THREAD_LOOP
+#define __thread_attr                   thread_local
+#else
+#define __thread_attr
+#endif
 
-        // The task id
-        typedef intptr_t                                task_id;
-        // The Task Handler
-        typedef void *                                  task_t;
-		// Time
-        typedef std::chrono::high_resolution_clock      hr_time_t;
-        typedef std::chrono::time_point< hr_time_t >    task_time_t;
-        typedef std::chrono::nanoseconds                duration_t;
-        #define task_time_now   std::chrono::high_resolution_clock::now
+// The task id
+typedef intptr_t                                task_id;
+// The Task Handler
+typedef void *                                  task_t;
+// Time
+typedef std::chrono::high_resolution_clock      hr_time_t;
+typedef std::chrono::time_point< hr_time_t >    task_time_t;
+typedef std::chrono::nanoseconds                duration_t;
+#define task_time_now   std::chrono::high_resolution_clock::now
 
-		// Job
-        typedef std::function< void(void) >             task_job_t;
+// Job
+typedef std::function< void(void) >             task_job_t;
 
-		// A task's status
-        typedef enum {
-            // Pending task, not been started yet.
-            task_status_pending         = 0,
-            // Running 
-            task_status_running         = 1,
-            // Paused, maybe yield
-            task_status_paused          = 2,
-            // Stop a task, any loop should check this status
-            task_status_stopped         = 3
-        } task_status;
+// A task's status
+typedef enum {
+    // Pending task, not been started yet.
+    task_status_pending         = 0,
+    // Running 
+    task_status_running         = 1,
+    // Paused, maybe yield
+    task_status_paused          = 2,
+    // Stop a task, any loop should check this status
+    task_status_stopped         = 3
+} task_status;
 
-        // Task Waiting Status
-        typedef enum {
-            // The event now waiting did receive the notification
-            receive_signal              = 0,
-            // No signal after the timeout duration
-            no_signal                   = 1,
-            // Some error occurred
-            bad_signal                  = 2
-        } waiting_signals;
+// Task Waiting Status
+typedef enum {
+    // The event now waiting did receive the notification
+    receive_signal              = 0,
+    // No signal after the timeout duration
+    no_signal                   = 1,
+    // Some error occurred
+    bad_signal                  = 2
+} waiting_signals;
 
-        // Task waiting event
-        typedef enum {
-            // The file descriptor is ready for reading
-            event_read                  = 0x01,
-            // The file descriptor is ready for writing
-            event_write                 = 0x02
-        } event_type;
+// Task waiting event
+typedef enum {
+    // The file descriptor is ready for reading
+    event_read                  = 0x01,
+    // The file descriptor is ready for writing
+    event_write                 = 0x02
+} event_type;
 
-		/*
-		 * The main loop of the coroutine schedule
-		 * */
-        class loop {
-        protected: 
-            // Return Code
-            bool                    running_;
-            int                     ret_code_;
+/*
+    * The main loop of the coroutine schedule
+    * */
+class loop {
+protected: 
+    // Return Code
+    bool                    running_;
+    int                     ret_code_;
 
-            // No copy and move
-            loop( const loop& ) = delete;
-            loop( loop&& ) = delete;
-            loop& operator = ( const loop& ) = delete;
-            loop& operator = ( loop&& ) = delete;
-        public: 
-            // Default C'str and D'str
-            loop();
-            ~loop();
+    // No copy and move
+    loop( const loop& ) = delete;
+    loop( loop&& ) = delete;
+    loop& operator = ( const loop& ) = delete;
+    loop& operator = ( loop&& ) = delete;
+public: 
+    // Default C'str and D'str
+    loop();
+    ~loop();
 
-            // Get task count
-            uint64_t task_count() const;
+    // Get task count
+    uint64_t task_count() const;
 
-            // Get the return code
-            int return_code() const;
+    // Get the return code
+    int return_code() const;
 
-			// Create a oneshot task
-            task_t do_job( task_job_t job );
+    // Create a oneshot task
+    task_t do_job( task_job_t job );
 
-            // Do Job with a given file descriptor
-            task_t do_job( long fd, task_job_t job );
+    // Do Job with a given file descriptor
+    task_t do_job( long fd, task_job_t job );
 
-			// Create a loop task
-            task_t do_loop( task_job_t job, duration_t interval );
+    // Create a loop task
+    task_t do_loop( task_job_t job, duration_t interval );
 
-			// Create a delay task
-            task_t do_delay( task_job_t job, duration_t delay );
+    // Create a delay task
+    task_t do_delay( task_job_t job, duration_t delay );
 
-            // The entry point of the main loop
-            void run();
+    // The entry point of the main loop
+    void run();
 
-            // Exit Current Loop
-            void exit( int code = 0 );
+    // Exit Current Loop
+    void exit( int code = 0 );
 
-            // Tell if current loop is running
-            bool is_running() const;
+    // Tell if current loop is running
+    bool is_running() const;
 
-            // The main loop
-            static __thread_attr loop   main;
-        };
+    // The main loop
+    static __thread_attr loop   main;
+};
 
-        #define this_loop       loop::main
+#define this_loop       loop::main
 
-        // Dump the debug info of a task
-        void task_debug_info( task_t ptask, FILE *fp = stdout, int lv = 0);
+// Dump the debug info of a task
+void task_debug_info( task_t ptask, FILE *fp = stdout, int lv = 0);
 
-        // Cancel all bounded task of given fd
-        void tasks_cancel_fd( long fd );
+// Cancel all bounded task of given fd
+void tasks_cancel_fd( long fd );
 
-        // Force to exit a task
-        void task_exit( task_t ptask );
+// Force to exit a task
+void task_exit( task_t ptask );
 
-        // Go on a task, when a task is blocked by 'holding', 
-        // make the 'holding' return true
-        void task_go_on( task_t ptask );
+// Go on a task, when a task is blocked by 'holding', 
+// make the 'holding' return true
+void task_go_on( task_t ptask );
 
-        // Stop a task's holding, make 'holding' return false
-        void task_stop( task_t ptask );
+// Stop a task's holding, make 'holding' return false
+void task_stop( task_t ptask );
 
-        // Exit all children and self
-        void task_recurse_exit( task_t ptask );
+// Exit all children and self
+void task_recurse_exit( task_t ptask );
 
-        // Get task's ID
-        task_id task_get_id( task_t ptask );
+// Get task's ID
+task_id task_get_id( task_t ptask );
 
-        // Set/Get Task Argument
-        void task_set_arg( task_t ptask, void * arg );
-        void * task_get_arg( task_t ptask );
+// Set/Get Task Argument
+void task_set_arg( task_t ptask, void * arg );
+void * task_get_arg( task_t ptask );
 
-        // Set/Get Task User Flags
-        void task_set_user_flag0( task_t ptask, uint32_t flag );
-        uint32_t task_get_user_flag0( task_t ptask );
-        void task_set_user_flag1( task_t ptask, uint32_t flag );
-        uint32_t task_get_user_flag1( task_t ptask );
+// Set/Get Task User Flags
+void task_set_user_flag0( task_t ptask, uint32_t flag );
+uint32_t task_get_user_flag0( task_t ptask );
+void task_set_user_flag1( task_t ptask, uint32_t flag );
+uint32_t task_get_user_flag1( task_t ptask );
 
-        // Get task's status
-        task_status task_get_status( task_t ptask );
+// Get task's status
+task_status task_get_status( task_t ptask );
 
-        // Get task's waiting_signal
-        waiting_signals task_get_waiting_signal( task_t ptask );
-        
-        // Register task's exit job
-        void task_register_exit_job(task_t ptask, task_job_t job);
+// Get task's waiting_signal
+waiting_signals task_get_waiting_signal( task_t ptask );
 
-        // Remove task exit job
-        void task_remove_exit_job(task_t ptask);
+// Register task's exit job
+void task_register_exit_job(task_t ptask, task_job_t job);
 
-        // task guard, wrapper for task_exit
-        class task_guard {
-            task_t      task_;
-        public: 
-            task_guard( task_t t );
-            ~task_guard();
-        };
+// Remove task exit job
+void task_remove_exit_job(task_t ptask);
 
-        // wrapper for task_stop
-        class task_keeper {
-            task_t      task_;
-        public: 
-            task_keeper( task_t t );
-            ~task_keeper();
-        };
+// task guard, wrapper for task_exit
+class task_guard {
+    task_t      task_;
+public: 
+    task_guard( task_t t );
+    ~task_guard();
+};
 
-        // Wrapper for task_go_on
-        class task_pauser {
-            task_t      task_;
-        public: 
-            task_pauser( task_t t );
-            ~task_pauser();
-        };
+// wrapper for task_stop
+class task_keeper {
+    task_t      task_;
+public: 
+    task_keeper( task_t t );
+    ~task_keeper();
+};
 
-        // If not invoke job_done, will stop the task when desroy
-        class task_helper {
-            task_t      task_;
-        public:
-            task_helper( task_t t );
-            ~task_helper();
-            void job_done();
-        };
- 
-        namespace this_task {
+// Wrapper for task_go_on
+class task_pauser {
+    task_t      task_;
+public: 
+    task_pauser( task_t t );
+    ~task_pauser();
+};
 
-            // Get the task point
-            task_t get_task();
+// If not invoke job_done, will stop the task when desroy
+class task_helper {
+    task_t      task_;
+public:
+    task_helper( task_t t );
+    ~task_helper();
+    void job_done();
+};
 
-            // Get the task id
-            task_id get_id();
+namespace this_task {
 
-            // Recurse Exit
-            void recurse_exit();
+    // Get the task point
+    task_t get_task();
 
-            // Set/Get Task Argument
-            void set_arg( void * arg );
-            void * get_arg( );
+    // Get the task id
+    task_id get_id();
 
-            // Set/Get Task User Flags
-            void set_user_flag0( uint32_t flag );
-            uint32_t get_user_flag0( );
-            void set_user_flag1( uint32_t flag );
-            uint32_t get_user_flag1( );
+    // Recurse Exit
+    void recurse_exit();
 
-            // Get task's status
-            task_status get_status( );
+    // Set/Get Task Argument
+    void set_arg( void * arg );
+    void * get_arg( );
 
-            // Get task's waiting_signal
-            waiting_signals get_waiting_signal( );
+    // Set/Get Task User Flags
+    void set_user_flag0( uint32_t flag );
+    uint32_t get_user_flag0( );
+    void set_user_flag1( uint32_t flag );
+    uint32_t get_user_flag1( );
 
-            // Cancel loop inside
-            void cancel_loop();
+    // Get task's status
+    task_status get_status( );
 
-            // yield, force to switch co
-            void yield();
+    // Get task's waiting_signal
+    waiting_signals get_waiting_signal( );
 
-            // Yield if the condition is true
-            bool yield_if( bool cond );
+    // Cancel loop inside
+    void cancel_loop();
 
-            // Yield if the condition is false
-            bool yield_if_not( bool cond );
+    // yield, force to switch co
+    void yield();
 
-            // Hold current task, yield, but not put back
-            // to the timed based cache
-            bool holding();
+    // Yield if the condition is true
+    bool yield_if( bool cond );
 
-            // Hold the task until timedout
-            bool holding_until( duration_t timedout );
+    // Yield if the condition is false
+    bool yield_if_not( bool cond );
 
-            // Wait on event
-            waiting_signals wait_for_event(
-                event_type eventid, 
-                duration_t timedout
-            );
-            // Wait on event if match the condition
-            bool wait_for_event_if(
-                bool cond,
-                event_type eventid,
-                duration_t timedout
-            );
+    // Hold current task, yield, but not put back
+    // to the timed based cache
+    bool holding();
 
-            // Wait for other fd's event
-            waiting_signals wait_fd_for_event(
-                long fd,
-                event_type eventid,
-                duration_t timedout
-            );
-            bool wait_fd_for_event_if(
-                bool cond,
-                long fd,
-                event_type eventid,
-                duration_t timedout
-            );
-            // Wait For other task's event
-            waiting_signals wait_other_task_for_event(
-                task_t ptask,
-                event_type eventid,
-                duration_t timedout
-            );
-            bool wait_other_task_for_event_if(
-                bool cond,
-                task_t ptask,
-                event_type eventid,
-                duration_t timedout
-            );
+    // Hold the task until timedout
+    bool holding_until( duration_t timedout );
 
-            // Sleep
-            void sleep( duration_t duration );
+    // Wait on event
+    waiting_signals wait_for_event(
+        event_type eventid, 
+        duration_t timedout
+    );
+    // Wait on event if match the condition
+    bool wait_for_event_if(
+        bool cond,
+        event_type eventid,
+        duration_t timedout
+    );
 
-            // Tick time
-            void begin_tick();
-            double tick();
+    // Wait for other fd's event
+    waiting_signals wait_fd_for_event(
+        long fd,
+        event_type eventid,
+        duration_t timedout
+    );
+    bool wait_fd_for_event_if(
+        bool cond,
+        long fd,
+        event_type eventid,
+        duration_t timedout
+    );
+    // Wait For other task's event
+    waiting_signals wait_other_task_for_event(
+        task_t ptask,
+        event_type eventid,
+        duration_t timedout
+    );
+    bool wait_other_task_for_event_if(
+        bool cond,
+        task_t ptask,
+        event_type eventid,
+        duration_t timedout
+    );
 
-            // Dump debug info to given FILE
-            void debug_info( FILE * fp = stdout );
-        }
+    // Sleep
+    void sleep( duration_t duration );
 
-        // The parent task events
-        namespace parent_task {
-            // Get the parent task
-            task_t get_task();
+    // Tick time
+    void begin_tick();
+    double tick();
 
-            // Go on
-            void go_on();
-
-            // Tell the holding task to stop
-            void stop();
-
-            struct guard {
-                bool            ok_flag;
-
-                // Simple guard for parent task,
-                // if the ok_flag is true, will invoke go_on when destroy
-                // otherwise, invoke stop
-                guard();
-                ~guard();
-
-                // set the ok_flag to true
-                void job_done();
-            };
-
-            // Helper
-            struct helper {
-                bool            sig_sent;
-
-                helper();
-                ~helper();
-
-                // Send a signal to the parent task
-                void can_go_on();
-                void need_stop();
-            };
-
-            // Tell the parent task to exit, and detach self
-            void exit();
-        }
-   }
+    // Dump debug info to given FILE
+    void debug_info( FILE * fp = stdout );
+}
+}
 }
 
 #endif

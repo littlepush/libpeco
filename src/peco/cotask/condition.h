@@ -15,88 +15,88 @@
 #include <peco/cotask/loop.h>
 
 namespace pe {
-    namespace co {
+namespace co {
 
-        // Dispatcher
-        class dispatcher {
-        private: 
-            int                         c_rw_[2];
-            task_t                      waiting_task_;
-            int                         notify_flag_;
-            std::map< task_t, bool >    pending_tasks_;
+// Dispatcher
+class dispatcher {
+private: 
+    int                         c_rw_[2];
+    task_t                      waiting_task_;
+    int                         notify_flag_;
+    std::map< task_t, bool >    pending_tasks_;
 
-            // Internal Wait
-            void wait_();
-        public: 
-            // Create and initialize the internal fd
-            dispatcher( );
-            // Destory and cancel all waiting task
-            ~dispatcher( );
+    // Internal Wait
+    void wait_();
+public: 
+    // Create and initialize the internal fd
+    dispatcher( );
+    // Destory and cancel all waiting task
+    ~dispatcher( );
 
-            // Wait for the event
-            bool wait( );
-            // Wait for the event until the timeout
-            bool wait_until( std::chrono::nanoseconds t );
+    // Wait for the event
+    bool wait( );
+    // Wait for the event until the timeout
+    bool wait_until( std::chrono::nanoseconds t );
 
-            // Notify one task
-            void notify_one();
-            // Notify all task
-            void notify_all();
-        };
+    // Notify one task
+    void notify_one();
+    // Notify all task
+    void notify_all();
+};
 
-        // Simple block condition
-        class condition {
-        public:
-            typedef std::function< bool ( void ) >      cond_t;
+// Simple block condition
+class condition {
+public:
+    typedef std::function< bool ( void ) >      cond_t;
 
-        private:
-            dispatcher          c_dp_;
-        public: 
-            // Create and initialize the internal fd
-            condition();
-            // Destory and cancel all waiting task
-            ~condition();
+private:
+    dispatcher          c_dp_;
+public: 
+    // Create and initialize the internal fd
+    condition();
+    // Destory and cancel all waiting task
+    ~condition();
 
-            // Wait for the condition to become true
-            bool wait( cond_t c );
+    // Wait for the condition to become true
+    bool wait( cond_t c );
 
-            // Wait for the condition until the timeout
-            bool wait_until( cond_t c, std::chrono::nanoseconds t );
+    // Wait for the condition until the timeout
+    bool wait_until( cond_t c, std::chrono::nanoseconds t );
 
-            // After change the condition, and give the signal for waiting task
-            void notify();
-        };
+    // After change the condition, and give the signal for waiting task
+    void notify();
+};
 
-        // Semaphore Type Condition
-        class semaphore {
-        private: 
+// Semaphore Type Condition
+class semaphore {
+private: 
 
-            // Two fd for read and write
-            int                 c_rw_[2];
+    // Two fd for read and write
+    int                 c_rw_[2];
 
-            // Semaphore Count
-            volatile uint32_t            c_count_;
-            // Pending task reference count
-            volatile uint32_t            c_ref_;
-        public: 
-            // Initialize the count 
-            semaphore();
-            // Destory and cancel all waiting task
-            ~semaphore();
+    // Semaphore Count
+    volatile uint32_t            c_count_;
+    // Pending task reference count
+    volatile uint32_t            c_ref_;
+public: 
+    // Initialize the count 
+    semaphore();
+    // Destory and cancel all waiting task
+    ~semaphore();
 
-            // Check the count or wait until it is bigger than 0
-            bool fetch();
+    // Check the count or wait until it is bigger than 0
+    bool fetch();
 
-            // Check the count or wait some time
-            bool fetch_until( std::chrono::nanoseconds t );
+    // Check the count or wait some time
+    bool fetch_until( std::chrono::nanoseconds t );
 
-            // Give a signal and increase the count
-            void give();
+    // Give a signal and increase the count
+    void give();
 
-            // Cancel all fetch task
-            void cancel();
-        };
-    }
+    // Cancel all fetch task
+    void cancel();
+};
+}
 }
 
 #endif

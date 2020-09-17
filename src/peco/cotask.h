@@ -13,7 +13,7 @@
 #define PE_CO_TASK_COTASK_H__
 
 #include <peco/cotask/loop.h>
-#include <peco/cotask/taskadapter.h>
+#include <peco/cotask/taskqueue.h>
 #include <peco/cotask/process.h>
 #include <peco/cotask/condition.h>
 #include <peco/cotask/eventqueue.h>
