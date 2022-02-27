@@ -1,0 +1,7 @@
+[submodule "zlib"]
+	path = thirdparty/zlib
+	url = git@code.impush.info:thirdparty/zlib
+[submodule "boringssl"]
+	path = thirdparty/boringssl
+	url = git@code.impush.info:thirdparty/boringssl
+	branch = libpeco-inline

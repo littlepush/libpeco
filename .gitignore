@@ -39,3 +39,8 @@ aclocal.m4
 *.deps
 libtool
 .dirstamp
+*build*
+.vscode
+
+# Cmake output
+src/peco.h
