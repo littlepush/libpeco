@@ -51,7 +51,7 @@ std::shared_ptr<loop> loop::gcontext() {
 loop::loop() {
   int ij_pipe[2];
   ignore_result(pipe(ij_pipe));
-  std::thread([&]() {
+  lt_ = new std::thread([&]() {
     auto ij = std::make_shared<injector>();
     this->ij_ = ij;
     int flag = 0;
@@ -59,7 +59,7 @@ loop::loop() {
 
     // Start the original loop
     peco::loop::shared()->main();
-  }).detach();
+  });
 
   // Wait 
   fd_set fs;
@@ -83,6 +83,10 @@ loop::~loop() {
       peco::loop::shared()->exit(0);
     });
   }
+  if (lt_->joinable()) {
+    lt_->join();
+  }
+  delete lt_;
 }
 
 /**

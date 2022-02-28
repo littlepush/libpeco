@@ -38,6 +38,5 @@ void task_1() {
 int main() {
   auto sl = peco::shared::loop::create();
   auto t = sl->run(task_1);
-  sleep(1);
   return 0;
 }

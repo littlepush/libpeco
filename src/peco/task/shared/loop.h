@@ -39,6 +39,8 @@ SOFTWARE.
 #include "peco/task/shared/task.h"
 #include "peco/task/shared/injector.h"
 
+#include <thread>
+
 namespace peco {
 namespace shared {
 
@@ -98,6 +100,7 @@ public:
 
 protected:
   std::weak_ptr<injector> ij_;
+  std::thread* lt_;
 };
 
 } // namespace shared
