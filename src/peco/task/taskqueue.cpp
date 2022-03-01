@@ -72,6 +72,18 @@ void taskqueue::insert(worker_t worker) {
   sem_.give();
 }
 
+/**
+  * @brief Sync the invocation, wait until the worker has been done
+*/
+void taskqueue::sync(worker_t worker) {
+  task this_task = task::this_task();
+  this->append([worker, this_task]() {
+    worker();
+    task(this_task).wakeup();
+  });
+  this_task.holding();
+}
+
 } // namespace peco
 
 // Push Chen

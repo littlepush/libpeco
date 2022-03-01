@@ -11,6 +11,8 @@
 #define PECO_EXTENSIONS_REDIS_H__
 
 #include "peco/pecostd.h"
+#include "peco/net/tcp.h"
+#include "peco/task/taskqueue.h"
 #include <vector>
 #include <ostream>
 
@@ -56,6 +58,16 @@ redis_command &operator<<(redis_command &rc, const std::string &cmd);
 
 // Stream ouput
 std::ostream &operator<<(std::ostream &os, const redis_command &rc);
+
+// Auto create the command and query
+template < typename cmd_t >
+redis_command& redis_build_command(redis_command& rc, const cmd_t& c) {
+  return (rc << std::to_string(c));
+}
+template < typename cmd_t, typename... other_cmd_t >
+redis_command& redis_build_command(redis_command& rc, const cmd_t& c, const other_cmd_t&... ocs) {
+  return redis_build_command(redis_build_command(rc, c), ocs...);
+}
 
 // Reply Type, according to the first char of the response.
 typedef enum {
@@ -137,15 +149,124 @@ public:
 };
 
 // Query Result
-typedef std::vector<redis_object> result_t;
+typedef std::vector<redis_object> redis_result_t;
+namespace redis_result {
 // No result
-extern const result_t no_result;
+extern const redis_result_t no_result;
+} // namespace redis_result
 
 // Format Stream Output
 std::ostream &operator<<(std::ostream &os, const redis_object &ro);
 
 // Output all result
-std::ostream &operator<<(std::ostream &os, const result_t &r);
+std::ostream &operator<<(std::ostream &os, const redis_result_t &r);
+
+/**
+ * @brief Redis Connector
+*/
+class redis_connector : public std::enable_shared_from_this<redis_connector> {
+public:
+  /**
+   * @brief Static Creator
+  */
+  static std::shared_ptr<redis_connector> create(const peer_t& server_info, const std::string& pwd = "", int db = 0);
+  static std::shared_ptr<redis_connector> create(const std::string& server_connect_string);
+
+  ~redis_connector();
+
+  /**
+   * @brief Validate
+  */
+  bool is_validate() const;
+  operator bool() const;
+
+  /**
+   * @brief Force to connect again
+  */
+  bool connect();
+
+  /**
+   * @brief Disconnect
+  */
+  void disconnect();
+
+  /**
+   * @brief No-keepalive
+  */
+  void nokeepalive();
+
+  /**
+   * @brief Test Connection
+  */
+  bool connection_test();
+
+  /**
+   * @brief Query command
+  */
+  redis_result_t query(redis_command&& cmd);
+
+  /**
+   * @brief Subscribe
+  */
+  bool subscribe( 
+      redis_command&& cmd, 
+      std::function< void (const std::string&, const std::string&) > cb
+  );
+
+  // Unsubscribe
+  void unsubscribe();
+
+  template <typename... cmd_t>
+  redis_result_t query(const cmd_t&... c) {
+    redis_command _c; 
+    redis_build_command(_c, c...);
+    return this->query(std::move(_c));
+  }
+  template <typename... cmd_t>
+  bool subscribe( 
+      std::function< void(const std::string&, const std::string&) > cb,
+      const cmd_t&... c
+  ) {
+    redis_command _c;
+    redis_build_command(_c, c...);
+    return this->subscribe(std::move(_c), cb);
+  }
+
+private: 
+  peer_t                          server_info_;
+  std::string                     password_;
+  int                             db_;
+
+  // Cache
+  int                             last_obj_count_;
+  redis_result_t                  last_result_;
+
+  // Inner TCP Connection
+  std::shared_ptr<tcp_connector>  conn_;
+  task                            keepalive_task_;
+  task                            subscribe_task_;
+  std::shared_ptr<taskqueue>      cmd_queue_;
+
+protected:
+  /**
+   * @brief C'str with server info and password
+  */
+  redis_connector(const peer_t& server_info, const std::string& pwd = "", int db = 0);
+  redis_connector(const std::string& server_connect_string);
+  // No Copy or Move
+  redis_connector(const redis_connector&) = delete;
+  redis_connector(redis_connector&&) = delete;
+  redis_connector& operator = ( const redis_connector& ) = delete;
+  redis_connector& operator = ( redis_connector&& ) = delete;
+
+protected:
+  // Tell if all data get for current querying
+  bool is_all_get_();
+  // Do job task
+  bool do_query_job_(const redis_command& cmd);
+  // Begin keepalive task
+  void begin_keepalive_();
+};
 
 } // namespace peco
 

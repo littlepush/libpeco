@@ -66,6 +66,11 @@ public:
   */
   void insert(worker_t worker);
 
+  /**
+   * @brief Sync the invocation, wait until the worker has been done
+  */
+  void sync(worker_t worker);
+
 protected:
   task inner_t_;
   semaphore sem_;

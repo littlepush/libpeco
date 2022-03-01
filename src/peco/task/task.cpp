@@ -77,6 +77,7 @@ task task::this_task() {
  * @brief Check if the task ref is alive
 */
 bool task::is_alive() const {
+  if (tid_ == kInvalidateTaskId) return false;
   auto rt = basic_task::fetch(tid_);
   return (rt != nullptr);
 }
