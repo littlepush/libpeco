@@ -13,6 +13,7 @@
 #include "peco/pecostd.h"
 #include "peco/net/tcp.h"
 #include "peco/task/taskqueue.h"
+#include "peco/utils/logs.h"
 #include <vector>
 #include <ostream>
 
@@ -54,7 +55,12 @@ public:
 };
 
 // Stream Concat redis_command with argument
-redis_command &operator<<(redis_command &rc, const std::string &cmd);
+redis_command &operator<<(redis_command &rc, const std::string& cmd);
+redis_command &operator<<(redis_command &rc, const char* cmd);
+template <typename _TyCmd >
+redis_command &operator<<(redis_command &rc, const _TyCmd& cmd) {
+  return rc << std::to_string(cmd);
+}
 
 // Stream ouput
 std::ostream &operator<<(std::ostream &os, const redis_command &rc);
@@ -62,7 +68,7 @@ std::ostream &operator<<(std::ostream &os, const redis_command &rc);
 // Auto create the command and query
 template < typename cmd_t >
 redis_command& redis_build_command(redis_command& rc, const cmd_t& c) {
-  return (rc << std::to_string(c));
+  return (rc << c);
 }
 template < typename cmd_t, typename... other_cmd_t >
 redis_command& redis_build_command(redis_command& rc, const cmd_t& c, const other_cmd_t&... ocs) {
@@ -160,6 +166,9 @@ std::ostream &operator<<(std::ostream &os, const redis_object &ro);
 
 // Output all result
 std::ostream &operator<<(std::ostream &os, const redis_result_t &r);
+
+// Output to log
+log_obj& operator<<(log_obj& lo, const redis_result_t &rc);
 
 /**
  * @brief Redis Connector

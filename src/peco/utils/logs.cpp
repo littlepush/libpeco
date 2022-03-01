@@ -90,6 +90,7 @@ log::log() {
 
 // Dump a line to the redis server
 void log::dump_log_line(std::string &&line) {
+  if (line.size() == 0) return;
   if (writer_) {
     writer_(std::move(line));
   }

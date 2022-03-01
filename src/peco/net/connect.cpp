@@ -75,7 +75,7 @@ bool tcp_connect::operator()(SOCKET_T fd) {
     getsockopt(fd, SOL_SOCKET, SO_ERROR, (char *)&err, (socklen_t *)&len);
     if (err != 0) {
       log::error << "Error: Failed to connect to " << dest_addr_ << 
-        " on tcp socket(" << fd << "), " << ::strerror(err) << std::endl;
+        " on tcp socket(" << fd << "), " << err << ":" << ::strerror(err) << std::endl;
       return false;
     } else {
       task::this_task().wait_fd_for_event(fd, kEventTypeWrite, timeout_);
@@ -89,9 +89,14 @@ bool tcp_connect::operator()(SOCKET_T fd) {
           << " on tcp socket(" << fd << ")." << std::endl;
         return false;
       } else {
-        log::error << "Error: Failed to connect to " << dest_addr_ <<
-          " on tcp socket(" << fd << "), " << ::strerror(err) <<
-          std::endl;
+        if (err == 0) {
+          log::warning << "Warning: Task has been cancelled, tcp socket(" << fd << ") is "
+            << "not allowed to continue process connecting event" << std::endl;
+        } else {
+          log::error << "Error: Failed to connect to " << dest_addr_ <<
+            " on tcp socket(" << fd << "), err: " << err << ", " << ::strerror(err) <<
+            std::endl;
+        }
         return false;
       }
     } 

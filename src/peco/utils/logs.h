@@ -63,7 +63,7 @@ public:
   // Init a log object with leven and dumper
   log_obj(const std::string &llv, log_dumper dumper);
 
-  template <typename T> log_obj &operator<<(const T &value) {
+  template <typename T> log_obj& operator<<(const T &value) {
     check_and_dump_time_();
     ss_ << value;
     return *this;
@@ -74,7 +74,7 @@ public:
     cout_type;
   typedef cout_type &(*stander_endline)(cout_type &);
 
-  inline log_obj &operator<<(stander_endline fend) {
+  inline log_obj& operator<<(stander_endline fend) {
     check_and_dump_line_();
     return *this;
   }

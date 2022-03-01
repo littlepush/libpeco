@@ -144,9 +144,9 @@ bool injector::sync_inject(worker_t worker) {
     int ret = 0;
     while (ret == 0) {
       struct timeval tv = {1, 0};
-      FD_ZERO(&fs);
-      FD_SET(ij_io->p[0], &fs);
       do {
+        FD_ZERO(&fs);
+        FD_SET(ij_io->p[0], &fs);
         ret = select(ij_io->p[0] + 1, &fs, NULL, NULL, &tv);
       } while (ret < 0 && errno == EINTR);
       if (ret > 0) return true;

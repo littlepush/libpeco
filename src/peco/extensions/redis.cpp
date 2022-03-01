@@ -102,6 +102,7 @@ redis_command::operator std::string() const { return this->str(); }
 
 // Stream Concat redis_Command with argument
 redis_command &operator<<(redis_command &rc, const std::string &cmd) { return rc += cmd; }
+redis_command &operator<<(redis_command &rc, const char* cmd) { return rc += cmd; }
 
 // Stream ouput
 std::ostream &operator<<(std::ostream &os, const redis_command &rc) {
@@ -372,6 +373,13 @@ std::ostream &operator<<(std::ostream &os, const redis_result_t &r) {
   return os;
 }
 
+log_obj& operator<<(log_obj& lo, const redis_result_t &rc) {
+  for (const auto& r : rc) {
+    lo << r.str() << std::endl;
+  }
+  return lo;
+}
+
 // Redis Connector
 
 /**
@@ -613,6 +621,7 @@ bool redis_connector::is_all_get_() {
 }
 // Do job task
 bool redis_connector::do_query_job_(const redis_command& cmd) {
+  last_obj_count_ = -1;
   last_result_.clear();
   if (cmd.is_validate()) {
     // write failed
