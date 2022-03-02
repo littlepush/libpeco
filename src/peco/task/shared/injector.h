@@ -37,6 +37,8 @@ SOFTWARE.
 #include "peco/pecostd.h"
 #include "peco/task/taskdef.h"
 
+#include <atomic>
+
 namespace peco {
 namespace shared {
 
@@ -61,6 +63,12 @@ public:
 
 public:
   /**
+   * @brief Disable current injector
+  */
+  void disable();
+
+public:
+  /**
    * @brief block current task/thread to inject the worker
   */
   bool sync_inject(worker_t worker);
@@ -75,7 +83,8 @@ public:
   */
   void async_inject(worker_t worker);
 protected:
-  int io_pipe_[2];
+  std::atomic<int> io_write_;
+  task_id_t ij_task_;
 };
 
 } // namespace shared

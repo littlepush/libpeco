@@ -33,11 +33,13 @@ SOFTWARE.
 
 bool in_child_task = false;
 void child_task() {
+  peco::log::debug << "in child task" << std::endl;
   in_child_task = true;
   peco::task::this_task().parent_task().wakeup();
 }
 
 void parent_task() {
+  peco::log::debug << "in parent task" << std::endl;
   peco::loop::shared()->run_delay(child_task, PECO_TIME_MS(100));
   // will get wakeup signal after 100ms
   bool flag = peco::task::this_task().holding_until(PECO_TIME_MS(1000));

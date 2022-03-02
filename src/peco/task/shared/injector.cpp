@@ -66,20 +66,23 @@ typedef struct {
  * @brief Create a injector
 */
 injector::injector() {
-  ignore_result(pipe(io_pipe_));
+  int io_pipe[2] = {-1, -1};
+  ignore_result(pipe(io_pipe));
+  int io_read = io_pipe[0];
+  io_write_ = io_pipe[1];
 
-  auto _t = basic_task::create_task([=]() {
+  auto t = basic_task::create_task([io_read]() {
     auto this_task = basic_task::running_task();
     InjectorInfo ij;
     while(this_task->signal() != kWaitingSignalBroken) {
-      loopimpl::shared().wait_for_reading(io_pipe_[0], this_task, PECO_TIME_S(1));
+      loopimpl::shared().wait_for_reading(io_read, this_task, PECO_TIME_S(1));
       if (this_task->signal() == kWaitingSignalNothing) {
         // timedout, no incoming command, continue
         continue;
       }
       if (this_task->signal() == kWaitingSignalReceived) {
         // have incoming command, process it
-        int ret = read(io_pipe_[0], &ij, sizeof(ij));
+        int ret = read(io_read, &ij, sizeof(ij));
         if (ij.p_worker) {
           (*ij.p_worker)();
         }
@@ -89,22 +92,60 @@ injector::injector() {
         }
       }
     }
+    // we are cancelled, not broken pipe
+    if (this_task->cancelled()) {
+      int ret = 0;
+      fd_set fs;
+      while (ret == 0) {
+        struct timeval tv = {0, 0};
+        do {
+          FD_ZERO(&fs);
+          FD_SET(io_read, &fs);
+          ret = select(io_read + 1, &fs, NULL, NULL, &tv);
+        } while (ret < 0 && errno == EINTR);
+        assert(ret >= 0);
+        if (ret == 0) {
+          // no more pending task, safe exit
+          break;
+        }
+        int l = read(io_read, &ij, sizeof(ij));
+        if (ij.io_out != -1 && (ij.timedout == -1 || TASK_TIME_NOW().time_since_epoch().count() < ij.timedout)) {
+          // finished running, -1 means cancelled
+          l = -1;
+          write(ij.io_out, &l, sizeof(int));
+        }
+      }
+    }
+    // close the pipe
+    close(io_read);
   });
-  loopimpl::shared().add_task(_t);
+  ij_task_ = t->task_id();
+  loopimpl::shared().add_task(t);
 }
 /**
  * @brief Destroy all injector related pipe
 */
 injector::~injector() {
-  if (io_pipe_[0] != -1) {
-    close(io_pipe_[0]);
-    io_pipe_[0] = -1;
-  }
-  if (io_pipe_[1] != -1) {
-    close(io_pipe_[1]);
-    io_pipe_[1] = -1;
-  }
+  this->disable();
 }
+/**
+  * @brief Disable current injector
+*/
+void injector::disable() {
+  if (io_write_ == -1) return;
+  // cancel ij task
+  auto ij_tid = ij_task_;
+  ij_task_ = kInvalidateTaskId;
+  this->async_inject([ij_tid]() {
+    auto t = basic_task::fetch(ij_tid);
+    loopimpl::shared().cancel(t);
+  });
+  // close write pipe
+  int w = io_write_;
+  io_write_ = -1;
+  close(w);
+}
+
 /**
  * @brief block current task/thread to inject the worker
 */
@@ -126,7 +167,7 @@ bool injector::sync_inject(worker_t worker) {
   ij.io_out = ij_io->p[1];
 
   // write to the pipe
-  write(io_pipe_[1], (void *)&ij, sizeof(ij));
+  write(io_write_, (void *)&ij, sizeof(ij));
 
   // Wait for the injection done
   auto _this_task = basic_task::running_task();
@@ -179,7 +220,7 @@ bool injector::inject_wait(worker_t worker, duration_t timedout) {
   ij.io_out = ij_io->p[1];
 
   // write to the pipe
-  write(io_pipe_[1], (void *)&ij, sizeof(ij));
+  write(io_write_, (void *)&ij, sizeof(ij));
 
   // Wait for the injection done
   auto _this_task = basic_task::running_task();
@@ -214,7 +255,7 @@ void injector::async_inject(worker_t worker) {
   ij.io_out = -1;
 
   // write to the pipe
-  write(io_pipe_[1], (void *)&ij, sizeof(ij));
+  write(io_write_, (void *)&ij, sizeof(ij));
 }
 
 } // namespace shared
