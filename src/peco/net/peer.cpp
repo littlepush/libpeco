@@ -30,6 +30,7 @@ SOFTWARE.
 */
 
 #include "peco/net/peer.h"
+#include "peco/utils/stringutil.h"
 
 namespace peco {
 
@@ -38,12 +39,21 @@ void peer_t::__parse_peer(const std::string &fmt) {
   size_t _pos = fmt.rfind(":");
   if (_pos == std::string::npos) {
     ip_ = "0.0.0.0";
-    port_ = stoi(fmt, nullptr, 10);
+    if (is_number(fmt)) {
+      port_ = stoi(fmt, nullptr, 10);
+    } else {
+      port_ = 0;
+    }
     format_ = "0.0.0.0:" + fmt;
   } else {
     ip_ = fmt.substr(0, _pos);
-    port_ = stoi(fmt.substr(_pos + 1), nullptr, 10);
-    format_ = fmt;
+    auto port_str_ = fmt.substr(_pos + 1);
+    if (is_number(port_str_)) {
+      port_ = stoi(port_str_, nullptr, 10);
+    } else {
+      port_ = 0;
+    }
+    format_ = ip.str() + ":" + std::to_string(port_);
   }
 }
 
