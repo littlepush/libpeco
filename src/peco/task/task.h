@@ -177,6 +177,11 @@ public:
   */
   void sleep(duration_t duration);
 
+  /**
+   * @brief Update a loop task's interval
+  */
+  void update_interval(duration_t interval);
+
 protected:
   task_id_t tid_;
 };

@@ -144,6 +144,11 @@ public:
   task_context_t* get_task();
 
   /**
+   * @brief Update a loop task's interval
+  */
+  void update_interval(duration_t interval);
+
+  /**
    * @brief Swap to current task
   */
   void swap_to_task();

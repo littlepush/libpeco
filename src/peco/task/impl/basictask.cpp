@@ -212,6 +212,13 @@ void basic_task::swap_to_task() {
 }
 
 /**
+ * @brief Update a loop task's interval
+*/
+void basic_task::update_interval(duration_t interval) {
+  task_->interval = interval;
+}
+
+/**
  * @brief Get Current running task
 */
 std::shared_ptr<basic_task>& basic_task::running_task() {

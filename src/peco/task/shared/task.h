@@ -130,6 +130,11 @@ public:
    * all method will return immediately.
   */
   void cancel();
+  
+  /**
+   * @brief Update a loop task's interval
+  */
+  void update_interval(duration_t interval);
 
 protected:
   std::weak_ptr<loop> loop_;

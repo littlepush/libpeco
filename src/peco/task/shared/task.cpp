@@ -223,6 +223,16 @@ void task::cancel() {
     });
   }
 }
+/**
+ * @brief Update a loop task's interval
+*/
+void task::update_interval(duration_t interval) {
+  if (auto l = loop_.lock()) {
+    l->sync_inject([=]() {
+      peco::task(tid_).update_interval(interval);
+    });
+  }
+}
 
 } // namespace shared
 } // namespace peco

@@ -275,6 +275,14 @@ void task::sleep(duration_t duration) {
     duration = (expect_end - now);
   } while (true);
 }
+/**
+ * @brief Update a loop task's interval
+*/
+void task::update_interval(duration_t interval) {
+  auto rt = basic_task::fetch(tid_);
+  if (rt == nullptr) return;
+  rt->update_interval(interval);
+}
 
 } // namespace peco
 
