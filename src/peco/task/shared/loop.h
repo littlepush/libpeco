@@ -80,19 +80,23 @@ public:
   /**
    * @brief block current task/thread to inject the worker
   */
-  bool sync_inject(worker_t worker);
+  bool sync_inject(worker_t worker) const;
 
   /**
    * @brief block current task/thread until the 'timedout'
   */
-  bool inject_wait(worker_t worker, duration_t timedout);
+  bool inject_wait(worker_t worker, duration_t timedout) const;
 
   /**
    * @brief just inject the worker and ignore the response
   */
-  void async_inject(worker_t worker);
+  void async_inject(worker_t worker) const;
 
 public:
+  /**
+   * @brief Get current loop's load average
+  */
+  double load_average() const;
   /**
    * @brief post `exit` command to the shared loop
   */

@@ -104,9 +104,11 @@ void loopcore::init(loopcore::core_error_handler_t herr,
 void loopcore::wait(duration_t duration) {
   cached_fd_event_t* p_cache = any_cast<cached_fd_event_t>(&core_data_);
 
+  auto begin = TASK_TIME_NOW();
   int count = epoll_wait(
     core_fd_, (core_event_t *)core_vars_, CO_MAX_SO_EVENTS, 
     std::chrono::duration_cast<std::chrono::milliseconds>(duration).count());
+  time_waited_ += (TASK_TIME_NOW() - begin).count();
   
   // Already stopped
   if (count == -1) return;
@@ -233,6 +235,13 @@ void loopcore::del_write_event(long fd) {
   if (c_it->second == EPOLL_FD_NO_EVENT) {
     p_cache->erase(c_it);
   }
+}
+
+/**
+ * @brief Get all time cost on waiting
+*/
+uint64_t loopcore::get_wait_time() const {
+  return time_waited_;
 }
 
 } // namespace peco

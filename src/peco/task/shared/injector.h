@@ -71,17 +71,17 @@ public:
   /**
    * @brief block current task/thread to inject the worker
   */
-  bool sync_inject(worker_t worker);
+  bool sync_inject(worker_t worker) const;
 
   /**
    * @brief block current task/thread until the 'timedout'
   */
-  bool inject_wait(worker_t worker, duration_t timedout);
+  bool inject_wait(worker_t worker, duration_t timedout) const;
 
   /**
    * @brief just inject the worker and ignore the response
   */
-  void async_inject(worker_t worker);
+  void async_inject(worker_t worker) const;
 protected:
   std::atomic<int> io_write_;
   task_id_t ij_task_;

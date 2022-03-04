@@ -72,6 +72,12 @@ int loop::main() {
   // return the loop wrapper's exit code
   return loopimpl::shared().exit_code();
 }
+/**
+ * @brief Get current loop's load average
+*/
+double loop::load_average() const {
+  return loopimpl::shared().load_average();
+}
 
 /**
  * @brief Invoke in any task, which will case current loop to break and return from main

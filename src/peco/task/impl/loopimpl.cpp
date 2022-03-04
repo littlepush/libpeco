@@ -88,6 +88,7 @@ void loopimpl::main() {
     });
 
   running_ = true;
+  begin_time_ = TASK_TIME_NOW();
   while (basic_task::cache_size() > 0) {
     while (this->timed_list_.size() > 0 && TASK_TIME_NOW() >= this->timed_list_.nearest_time()) {
       auto result = this->timed_list_.fetch();
@@ -132,6 +133,12 @@ void loopimpl::exit(int code) {
   exit_code_ = code;
   running_ = false;
   this->stop();
+}
+/**
+ * @brief Get the load average of current loop
+*/
+double loopimpl::load_average() const {
+  return (double)this->get_wait_time() / (double)(TASK_TIME_NOW() - begin_time_).count();
 }
 
 /**

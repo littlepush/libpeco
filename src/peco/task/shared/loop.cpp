@@ -134,7 +134,7 @@ peco::shared::task loop::run_delay(worker_t worker, duration_t delay) {
 /**
  * @brief block current task/thread to inject the worker
 */
-bool loop::sync_inject(worker_t worker) {
+bool loop::sync_inject(worker_t worker) const {
   if (auto ij = ij_.lock()) {
     return ij->sync_inject(worker);
   }
@@ -144,7 +144,7 @@ bool loop::sync_inject(worker_t worker) {
 /**
  * @brief block current task/thread until the 'timedout'
 */
-bool loop::inject_wait(worker_t worker, duration_t timedout) {
+bool loop::inject_wait(worker_t worker, duration_t timedout) const {
   if (auto ij = ij_.lock()) {
     return ij->inject_wait(worker, timedout);
   }
@@ -154,7 +154,7 @@ bool loop::inject_wait(worker_t worker, duration_t timedout) {
 /**
  * @brief just inject the worker and ignore the response
 */
-void loop::async_inject(worker_t worker) {
+void loop::async_inject(worker_t worker) const {
   if (auto ij = ij_.lock()) {
     ij->async_inject(worker);
   }
@@ -169,6 +169,16 @@ void loop::exit(int code) {
       peco::loop::shared()->exit(code);
     });
   }
+}
+/**
+ * @brief Get current loop's load average
+*/
+double loop::load_average() const {
+  double la = 0;
+  this->sync_inject([&la]() {
+    la = peco::loop::shared()->load_average();
+  });
+  return la;
 }
 
 } // namespace shared

@@ -149,7 +149,7 @@ void injector::disable() {
 /**
  * @brief block current task/thread to inject the worker
 */
-bool injector::sync_inject(worker_t worker) {
+bool injector::sync_inject(worker_t worker) const {
   std::shared_ptr<pipe_wrapper_t> ij_io(new pipe_wrapper_t, [](pipe_wrapper_t * pw) {
     if (pw->p[0] != -1) {
       close(pw->p[0]);
@@ -200,7 +200,7 @@ bool injector::sync_inject(worker_t worker) {
 /**
  * @brief block current task/thread until the 'timedout'
 */
-bool injector::inject_wait(worker_t worker, duration_t timedout) {
+bool injector::inject_wait(worker_t worker, duration_t timedout) const {
   std::shared_ptr<pipe_wrapper_t> ij_io(new pipe_wrapper_t, [](pipe_wrapper_t * pw) {
     if (pw->p[0] != -1) {
       close(pw->p[0]);
@@ -248,7 +248,7 @@ bool injector::inject_wait(worker_t worker, duration_t timedout) {
 /**
  * @brief just inject the worker and ignore the response
 */
-void injector::async_inject(worker_t worker) {
+void injector::async_inject(worker_t worker) const {
   InjectorInfo ij;
   ij.p_worker = &worker;
   ij.timedout = -1;

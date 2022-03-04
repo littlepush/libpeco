@@ -67,9 +67,11 @@ void loopcore::wait(duration_t duration) {
   static const auto kNanoToSeconds = (1000 * 1000 * 1000);
   auto nano = duration.count();
   struct timespec ts = {nano / kNanoToSeconds, nano % kNanoToSeconds};
+  auto begin = TASK_TIME_NOW();
   int count = kevent(core_fd_, NULL, 0, (core_event_t *)core_vars_,
                      CO_MAX_SO_EVENTS, &ts);
-
+  time_waited_ += (TASK_TIME_NOW() - begin).count();
+  
   // Already stopped
   if (count == -1) return;
 
@@ -133,6 +135,14 @@ void loopcore::del_write_event(long fd) {
   EV_SET(&e, fd, EVFILT_WRITE, EV_DELETE | EV_ONESHOT, 0, 0, NULL);
   ignore_result(kevent(core_fd_, &e, 1, NULL, 0, NULL));
 }
+
+/**
+ * @brief Get all time cost on waiting
+*/
+uint64_t loopcore::get_wait_time() const {
+  return time_waited_;
+}
+
 
 } // namespace peco
 

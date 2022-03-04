@@ -118,10 +118,16 @@ public:
   */
   void cancel(std::shared_ptr<basic_task> ptrt);
 
+  /**
+   * @brief Get the load average of current loop
+  */
+  double load_average() const;
+
 protected:
   tasklist timed_list_;
   bool running_ = false;
   int exit_code_ = 0;
+  task_time_t begin_time_;
 };
 
 } // namespace peco

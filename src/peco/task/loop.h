@@ -59,6 +59,11 @@ public:
   */
   int main();
 
+  /**
+   * @brief Get current loop's load average
+  */
+  double load_average() const;
+
 public:
   /**
    * @brief Invoke in any task, which will case current loop to break and return from main

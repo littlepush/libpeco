@@ -73,11 +73,17 @@ public :
   bool add_write_event(long fd);
   void del_write_event(long fd);
 
+  /**
+   * @brief Get all time cost on waiting
+  */
+  uint64_t get_wait_time() const;
+
 protected:
   int core_fd_ = -1;
   void *core_vars_ = nullptr;
   // Any platform related data  
   any core_data_;
+  uint64_t time_waited_ = 0;
 
   /**
    * @brief Event Handlers
