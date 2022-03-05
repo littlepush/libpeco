@@ -152,12 +152,12 @@ public:
   /**
    * @brief Read data from peer socket
   */
-  inet_incoming read(duration_t timedout = PECO_TIME_S(10), size_t bufsize = 4096);
+  virtual inet_incoming read(duration_t timedout = PECO_TIME_S(10), size_t bufsize = 4096);
 
   /**
    * @brief Write data to peer socket
   */
-  bool write(const char* data, size_t length, duration_t timedout = PECO_TIME_S(10));
+  virtual bool write(const char* data, size_t length, duration_t timedout = PECO_TIME_S(10));
   bool write(std::string&& data, duration_t timedout = PECO_TIME_S(10));
   bool write(const std::string& data, duration_t timedout = PECO_TIME_S(10));
 
