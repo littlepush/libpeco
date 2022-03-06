@@ -396,6 +396,10 @@ bool has_data_pending(SOCKET_T hSo) {
     FD_SET(hSo, &_fs);
     _ret = ::select(hSo + 1, &_fs, NULL, NULL, &_tv);
   } while (_ret < 0 && errno == EINTR);
+  // Try to peek
+  if (_ret <= 0) return false;
+  _ret = recv(hSo, NULL, 0, MSG_PEEK);
+  // If _ret < 0, means recv an error signal
   return (_ret > 0);
 }
 
