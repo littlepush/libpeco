@@ -136,7 +136,7 @@ void tasklist::erase(basic_task_ptr_t t, long fd, EventType event_type) {
   if (fd != -1l) {
     auto fd_range = fd_cache_map_.equal_range(cache_fd_t(fd, event_type));
     for (auto fd_it = fd_range.first; fd_it != fd_range.second;) {
-      if (fd_it->second == t->task_id()) {
+      if (fd_it->first.event_type == event_type && fd_it->second == t->task_id()) {
         fd_it = fd_cache_map_.erase(fd_it);
       } else {
         ++fd_it;
@@ -185,7 +185,9 @@ std::list<task_id_t> tasklist::search(long fd, EventType event_type) {
   std::list<task_id_t> result;
   auto fd_range = fd_cache_map_.equal_range(cache_fd_t(fd, event_type));
   for (auto fd_it = fd_range.first; fd_it != fd_range.second; ++fd_it) {
-    result.push_back(fd_it->second);
+    if (fd_it->first.event_type == event_type) {
+      result.push_back(fd_it->second);
+    }
   }
   return result;
 }

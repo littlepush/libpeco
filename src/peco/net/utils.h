@@ -196,7 +196,8 @@ namespace net_utils {
       char * buffer,
       size_t length,
       std::function<int (SOCKET_T, char *, size_t)> f);
-  std::string read(
+  bool read(
+      std::string& buffer,
       SOCKET_T hSo, 
       std::function<int (SOCKET_T, char *, size_t)> f, 
       uint32_t max_buffer_size = 0);

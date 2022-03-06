@@ -46,6 +46,7 @@ int main() {
     auto c = peco::tcp_connector::create();
     c->connect("127.0.0.1:12345");
     c->write("hello peco", 10);
+    peco::task::this_task().sleep(PECO_TIME_MS(100));
   }, PECO_TIME_S(1));
 
   l->sync_inject([]() {

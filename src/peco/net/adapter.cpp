@@ -139,16 +139,20 @@ inet_incoming connector_adapter::read(duration_t timedout, size_t bufsize) {
     if (sig == kWaitingSignalNothing) return inet_incoming(kNetOpStatusTimedout, "");
     if (sig == kWaitingSignalBroken) return inet_incoming(kNetOpStatusFailed, "");
   }
-  std::string buffer = std::forward<std::string>(
-    net_utils::read(fd_, std::bind(
-      ::recv, 
-      std::placeholders::_1, 
-      std::placeholders::_2, 
-      std::placeholders::_3, 
-      0 | SO_NETWORK_NOSIGNAL), bufsize)
+  std::string buffer;
+  bool ret = net_utils::read(buffer, fd_, std::bind(
+    ::recv, 
+    std::placeholders::_1, 
+    std::placeholders::_2, 
+    std::placeholders::_3, 
+    0 | SO_NETWORK_NOSIGNAL), bufsize
   );
 
-  return inet_incoming(kNetOpStatusOK, std::move(buffer));
+  if (ret == false) {
+    return inet_incoming(kNetOpStatusFailed, "");
+  } else {
+    return inet_incoming(kNetOpStatusOK, std::move(buffer));
+  }
 }
 
 /**

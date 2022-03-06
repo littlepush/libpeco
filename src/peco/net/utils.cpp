@@ -470,7 +470,6 @@ size_t read(SOCKET_T hSo, char *buffer, size_t length,
                  << ::strerror(errno) << std::endl;
       return 0;
     } else if (_retCode == 0) {
-      log::debug << "Peer has closed the socket(" << hSo << ")" << std::endl;
       return 0;
     } else {
       _received += _retCode;
@@ -479,10 +478,11 @@ size_t read(SOCKET_T hSo, char *buffer, size_t length,
   } while (_leftspace > 0);
   return _received;
 }
-std::string read(SOCKET_T hSo, std::function<int(SOCKET_T, char *, size_t)> f,
+bool read(std::string& buffer, 
+  SOCKET_T hSo, std::function<int(SOCKET_T, char *, size_t)> f,
                  uint32_t max_buffer_size) {
   if (SOCKET_NOT_VALIDATE(hSo))
-    return std::string("");
+    return false;
   bool _hasLimit = (max_buffer_size != 0);
   size_t BUF_SIZE = (_hasLimit ? max_buffer_size : 1024); // 1KB
   std::string _buffer(BUF_SIZE, '\0');
@@ -504,11 +504,11 @@ std::string read(SOCKET_T hSo, std::function<int(SOCKET_T, char *, size_t)> f,
       _buffer.resize(0);
       log::error << "Error: Failed to receive data on socket(" << hSo << ", "
                  << ::strerror(errno) << std::endl;
-      break;
+      return false;
     } else if (_retCode == 0) {
       // Peer Close
       _buffer.resize(0);
-      break;
+      return false;
     } else {
       _received += _retCode;
       _leftspace -= _retCode;
@@ -539,7 +539,8 @@ std::string read(SOCKET_T hSo, std::function<int(SOCKET_T, char *, size_t)> f,
       }
     }
   } while (true);
-  return _buffer;
+  buffer = std::move(_buffer);
+  return true;
 }
 // Write Data to a socket
 int write(SOCKET_T hSo, const char *data, size_t data_lenth,

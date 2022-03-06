@@ -81,8 +81,6 @@ bool tcp_connect::operator()(SOCKET_T fd) {
       task::this_task().wait_fd_for_event(fd, kEventTypeWrite, timeout_);
       auto sig = task::this_task().signal();
       if (sig == kWaitingSignalReceived) {
-        log::debug << "Connected to " << dest_addr_ << " using tcp socket("
-          << fd << ") on local port " << net_utils::localport(fd) << std::endl;
         return true;
       } else if (sig == kWaitingSignalNothing) {
         log::warning << "Warning: timedout on connection to " << dest_addr_
@@ -101,9 +99,6 @@ bool tcp_connect::operator()(SOCKET_T fd) {
       }
     } 
   } else {
-    log::debug << "Connect to " << dest_addr_ << 
-      " is so fast using tcp socket(" << 
-      fd << ") on localport" << net_utils::localport(fd) << std::endl;
     return true;
   }
   // never go here

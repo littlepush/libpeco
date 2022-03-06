@@ -170,16 +170,19 @@ bool udp_listener::listen(std::function<void(std::shared_ptr<udp_packet>)> accep
         return;
       }
       if (sig == kWaitingSignalNothing) continue;
-      std::string buffer = std::forward<std::string>(
-        net_utils::read(self->fd_, std::bind(::recvfrom, 
+      std::string buffer;
+      bool ret = net_utils::read(
+        buffer, self->fd_, std::bind(::recvfrom, 
           std::placeholders::_1,
           std::placeholders::_2,
           std::placeholders::_3,
           0,
           (struct sockaddr *)&addr,
           &addr_len
-        ), 2048)
-      );
+        ), 2048);
+      if (ret == false) {
+        break;
+      }
       if (buffer.size() > 0) {
         accept_slot(udp_packet::create(self->fd_, peer_t(addr), std::move(buffer)));
       }

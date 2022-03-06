@@ -61,6 +61,8 @@ void loopimpl::main() {
   this->init(
     [=](long fd) {
       auto id_list = this->timed_list_.search_all(fd);
+      // erase task related with this fd
+      this->timed_list_.erase(fd);
       for (const auto& tid : id_list) {
         auto ptrt = basic_task::fetch(tid);
         if (ptrt) {
@@ -70,8 +72,6 @@ void loopimpl::main() {
           this->timed_list_.insert(ptrt, nullptr);
         }
       }
-      // erase task related with this fd
-      this->timed_list_.erase(fd);
     },
     [=](long fd, EventType event_type) {
       auto id_list = this->timed_list_.search(fd, event_type);
