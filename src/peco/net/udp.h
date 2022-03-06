@@ -71,6 +71,15 @@ public:
   using connector_adapter::read;
   using connector_adapter::write;
 
+  /**
+   * @brief Get local port
+  */
+  uint16_t localport() const;
+  /**
+   * @brief Get remote address
+  */
+  peer_t peer_info() const;
+
 protected:
   /**
    * @brief Not Allowed

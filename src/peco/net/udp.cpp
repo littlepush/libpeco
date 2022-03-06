@@ -81,6 +81,19 @@ bool udp_connector::connect(const std::string& dest_addr) {
 }
 
 /**
+ * @brief Get local port
+*/
+uint16_t udp_connector::localport() const {
+  return net_utils::localport(fd_);
+}
+/**
+ * @brief Get remote address
+*/
+peer_t udp_connector::peer_info() const {
+  return net_utils::socket_peerinfo(fd_);
+}
+
+/**
  * @brief Not Allowed
 */
 udp_connector::udp_connector() {
