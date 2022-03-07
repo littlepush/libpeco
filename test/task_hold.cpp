@@ -51,13 +51,21 @@ void task_hold() {
 void task_hold_until_and_wakeup() {
   bool been_waked_up = peco::task::this_task().holding_until(PECO_TIME_S(1));
   assert(been_waked_up == true);
-  peco::log::debug << "task_hold_until_and_wakeup has been waked up" << std::endl;
+  if (been_waked_up) {
+    peco::log::debug << "task_hold_until_and_wakeup has been waked up" << std::endl;
+  } else {
+    peco::log::error << "task_hold_until_and_wakeup has not been waked up" << std::endl;
+  }
 }
 
 void task_hold_until_and_timeout() {
   bool been_waked_up = peco::task::this_task().holding_until(PECO_TIME_S(1));
   assert(been_waked_up == false);
-  peco::log::debug << "task_hold_until_and_timeout has been timedout" << std::endl;
+  if (!been_waked_up) {
+    peco::log::debug << "task_hold_until_and_timeout has been timedout" << std::endl;
+  } else {
+    peco::log::error << "task_hold_until_and_timeout has been wakedup" << std::endl;
+  }
 }
 
 void task_wakeup(peco::task t) {

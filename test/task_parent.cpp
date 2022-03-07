@@ -43,6 +43,9 @@ void parent_task() {
   peco::loop::shared()->run_delay(child_task, PECO_TIME_MS(100));
   // will get wakeup signal after 100ms
   bool flag = peco::task::this_task().holding_until(PECO_TIME_MS(1000));
+  if (flag) {
+    peco::log::debug << "waked up by child" << std::endl;
+  }
   assert(flag);
 }
 
