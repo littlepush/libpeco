@@ -88,7 +88,7 @@ injector::injector() {
         }
         if (ij.io_out != -1 && (ij.timedout == -1 || TASK_TIME_NOW().time_since_epoch().count() < ij.timedout)) {
           // finished running
-          write(ij.io_out, &ret, sizeof(int));
+          ignore_result(write(ij.io_out, &ret, sizeof(int)));
         }
       }
     }
@@ -112,7 +112,7 @@ injector::injector() {
         if (ij.io_out != -1 && (ij.timedout == -1 || TASK_TIME_NOW().time_since_epoch().count() < ij.timedout)) {
           // finished running, -1 means cancelled
           l = -1;
-          write(ij.io_out, &l, sizeof(int));
+          ignore_result(write(ij.io_out, &l, sizeof(int)));
         }
       }
     }
@@ -167,7 +167,7 @@ bool injector::sync_inject(worker_t worker) const {
   ij.io_out = ij_io->p[1];
 
   // write to the pipe
-  write(io_write_, (void *)&ij, sizeof(ij));
+  ignore_result(write(io_write_, (void *)&ij, sizeof(ij)));
 
   // Wait for the injection done
   auto _this_task = basic_task::running_task();
@@ -220,7 +220,7 @@ bool injector::inject_wait(worker_t worker, duration_t timedout) const {
   ij.io_out = ij_io->p[1];
 
   // write to the pipe
-  write(io_write_, (void *)&ij, sizeof(ij));
+  ignore_result(write(io_write_, (void *)&ij, sizeof(ij)));
 
   // Wait for the injection done
   auto _this_task = basic_task::running_task();
@@ -255,7 +255,7 @@ void injector::async_inject(worker_t worker) const {
   ij.io_out = -1;
 
   // write to the pipe
-  write(io_write_, (void *)&ij, sizeof(ij));
+  ignore_result(write(io_write_, (void *)&ij, sizeof(ij)));
 }
 
 } // namespace shared

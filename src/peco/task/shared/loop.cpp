@@ -55,7 +55,7 @@ loop::loop() {
     auto ij = std::make_shared<injector>();
     this->ij_ = ij;
     int flag = 0;
-    write(ij_pipe[1], &flag, sizeof(int));
+    ignore_result(write(ij_pipe[1], &flag, sizeof(int)));
 
     // Start the original loop
     peco::loop::shared()->main();
