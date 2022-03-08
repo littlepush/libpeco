@@ -1,7 +1,7 @@
 /*
-    task.h
+    signal.h
     libpeco
-    2019-05-23
+    2022-03-08
     Push Chen
 */
 
@@ -31,20 +31,57 @@ SOFTWARE.
 
 #pragma once
 
-#ifndef PECO_TASK_COTASK_H__
-#define PECO_TASK_COTASK_H__
+#ifndef PECO_SIGNAL_H__
+#define PECO_SIGNAL_H__
 
-#include "peco/task/taskdef.h"
 #include "peco/task/task.h"
 #include "peco/task/loop.h"
-#include "peco/task/semaphore.h"
-#include "peco/task/signal.h"
 
-#if PECO_ENABLE_SHARETASK
-#include "peco/task/shared/loop.h"
-#include "peco/task/shared/injector.h"
-#include "peco/task/shared/task.h"
-#endif
+#include <list>
+
+namespace peco {
+
+class signal {
+public:
+  /**
+   * @brief Init the signal
+  */
+  signal();
+  /**
+   * @brief Wakeup all pending task, with signal no recieived(timedout)
+  */
+  ~signal();
+
+  /**
+   * @brief Hold current task until other one give a signal
+  */
+  bool wait();
+
+  /**
+   * @brief Hold current task until other one give a signal or timedout
+  */
+  bool wait_until(duration_t timedout);
+
+  /**
+   * @brief Give a signal to the first waiting task
+  */
+  void trigger_one();
+
+  /**
+   * @brief Notify all pending task
+  */
+  void trigger_all();
+
+  /**
+   * @brief Force to cancel all pending task
+  */
+  void cancel();
+
+protected:
+  std::list<task_id_t> waiting_task_;
+};
+
+} // namespace peco
 
 #endif
 

@@ -1,7 +1,7 @@
 /*
-    task.h
+    task_signal.cpp
     libpeco
-    2019-05-23
+    2022-03-08
     Push Chen
 */
 
@@ -29,23 +29,30 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#pragma once
+#include "peco.h"
 
-#ifndef PECO_TASK_COTASK_H__
-#define PECO_TASK_COTASK_H__
+static peco::signal gSignal;
 
-#include "peco/task/taskdef.h"
-#include "peco/task/task.h"
-#include "peco/task/loop.h"
-#include "peco/task/semaphore.h"
-#include "peco/task/signal.h"
+void pending_task() {
+  if (gSignal.wait()) {
+    peco::log::debug << "get signal!" << std::endl;
+  } else {
+    peco::log::error << "task has been cancelled" << std::endl;
+  }
+  peco::loop::shared()->exit(0);
+}
 
-#if PECO_ENABLE_SHARETASK
-#include "peco/task/shared/loop.h"
-#include "peco/task/shared/injector.h"
-#include "peco/task/shared/task.h"
-#endif
+void pending_task_until() {
+  if (gSignal.wait_until(PECO_TIME_MS(1000))) {
+    peco::log::error << "invalidate signal got" << std::endl;
+  } else {
+    peco::log::debug << "yes, no signal in 1000ms" << std::endl;
+  }
+  gSignal.trigger_one();
+}
 
-#endif
-
-// Push Chen
+int main() {
+  peco::loop::shared()->run(pending_task);
+  peco::loop::shared()->run(pending_task_until);
+  return peco::loop::shared()->main();
+}
