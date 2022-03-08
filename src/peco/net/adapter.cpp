@@ -118,6 +118,14 @@ void inet_adapter::close() {
 connector_adapter::~connector_adapter() {}
 
 /**
+ * @brief Change the buffer size
+*/
+bool connector_adapter::set_buffer_size(uint32_t rmem, uint32_t wmem) {
+  if (INVALIDATE_SOCKET == fd_) return false;
+  return net_utils::buffersize(fd_, rmem, wmem);
+}
+
+/**
  * @brief Connect to peer
 */
 bool connector_adapter::connect(connector_adapter::slot_connect_t connect_slot) {

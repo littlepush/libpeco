@@ -145,6 +145,11 @@ public:
   virtual ~connector_adapter();
 
   /**
+   * @brief Change the buffer size
+  */
+  bool set_buffer_size(uint32_t rmem, uint32_t wmem);
+
+  /**
    * @brief Connect to peer
   */
   bool connect(slot_connect_t connect_slot);
