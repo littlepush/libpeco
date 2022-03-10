@@ -85,6 +85,7 @@ injector::injector() {
         int ret = read(io_read, &ij, sizeof(ij));
         if (ij.p_worker) {
           (*ij.p_worker)();
+          delete ij.p_worker;
         }
         if (ij.io_out != -1 && (ij.timedout == -1 || TASK_TIME_NOW().time_since_epoch().count() < ij.timedout)) {
           // finished running
@@ -111,6 +112,9 @@ injector::injector() {
         int l = read(io_read, &ij, sizeof(ij));
         if (ij.io_out != -1 && (ij.timedout == -1 || TASK_TIME_NOW().time_since_epoch().count() < ij.timedout)) {
           // finished running, -1 means cancelled
+          if (ij.p_worker) {
+            delete ij.p_worker;
+          }
           l = -1;
           ignore_result(write(ij.io_out, &l, sizeof(int)));
         }
@@ -162,7 +166,7 @@ bool injector::sync_inject(worker_t worker) const {
   ignore_result(pipe(ij_io->p));
 
   InjectorInfo ij;
-  ij.p_worker = &worker;
+  ij.p_worker = new worker_t(worker);
   ij.timedout = -1;
   ij.io_out = ij_io->p[1];
 
@@ -215,7 +219,7 @@ bool injector::inject_wait(worker_t worker, duration_t timedout) const {
   auto real_time_out = TASK_TIME_NOW() + timedout;
 
   InjectorInfo ij;
-  ij.p_worker = &worker;
+  ij.p_worker = new worker_t(worker);
   ij.timedout = real_time_out.time_since_epoch().count();
   ij.io_out = ij_io->p[1];
 
@@ -250,7 +254,7 @@ bool injector::inject_wait(worker_t worker, duration_t timedout) const {
 */
 void injector::async_inject(worker_t worker) const {
   InjectorInfo ij;
-  ij.p_worker = &worker;
+  ij.p_worker = new worker_t(worker);
   ij.timedout = -1;
   ij.io_out = -1;
 
