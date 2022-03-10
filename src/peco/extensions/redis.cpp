@@ -617,6 +617,7 @@ void redis_connector::unsubscribe() {
 bool redis_connector::is_all_get_() {
   if (this->last_obj_count_ == -1) return false;
   if ((int)this->last_result_.size() != this->last_obj_count_) return false;
+  if (this->last_result_.size() == 0) return true;
   return this->last_result_.rbegin()->all_get();
 }
 // Do job task
