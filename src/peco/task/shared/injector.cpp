@@ -83,14 +83,17 @@ injector::injector() {
       if (this_task->signal() == kWaitingSignalReceived) {
         // have incoming command, process it
         int ret = read(io_read, &ij, sizeof(ij));
-        if (ij.p_worker) {
-          (*ij.p_worker)();
-          delete ij.p_worker;
-        }
-        if (ij.io_out != -1 && (ij.timedout == -1 || TASK_TIME_NOW().time_since_epoch().count() < ij.timedout)) {
-          // finished running
-          ignore_result(write(ij.io_out, &ret, sizeof(int)));
-        }
+        auto work_task = basic_task::create_task([=](){
+          if (ij.p_worker) {
+            (*ij.p_worker)();
+            delete ij.p_worker;
+          }
+          if (ij.io_out != -1 && (ij.timedout == -1 || TASK_TIME_NOW().time_since_epoch().count() < ij.timedout)) {
+            // finished running
+            ignore_result(write(ij.io_out, &ret, sizeof(int)));
+          }
+        });
+        loopimpl::shared().add_task(work_task);
       }
     }
     // we are cancelled, not broken pipe

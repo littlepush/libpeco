@@ -70,6 +70,7 @@ public:
 public:
   /**
    * @brief block current task/thread to inject the worker
+   * @note do not use this method in destructor
   */
   bool sync_inject(worker_t worker) const;
 
