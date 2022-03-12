@@ -227,6 +227,35 @@ bool udp_listener::listen(listener_adapter::slot_accept_t accept_slot) {
   });
   return true;
 }
+
+/**
+ * @brief Write data to specified peer
+*/
+bool udp_listener::writeto(const peer_t& peer, const char* data, size_t length) {
+  if (length == 0) return false;
+  size_t sent = 0;
+  struct sockaddr_in addr = (struct sockaddr_in)peer;
+  do {
+    int ret = net_utils::write(fd_, data + sent, 
+      (length - sent < 1500 ? length - sent : 1500), 
+      std::bind(::sendto, 
+        std::placeholders::_1,
+        std::placeholders::_2,
+        std::placeholders::_3, 
+        0 | SO_NETWORK_NOSIGNAL,
+        (struct sockaddr *)&addr, 
+        sizeof(addr)
+      )
+    );
+    if (ret == -1) return false;
+    sent += (size_t)ret;
+  } while (sent < length);
+  return true;
+}
+bool udp_listener::writeto(const peer_t& peer, const std::string& data) {
+  return this->writeto(peer, data.c_str(), data.size());
+}
+
 /**
  * @brief Not allowed
 */

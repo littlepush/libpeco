@@ -150,6 +150,12 @@ public:
   */
   bool listen(std::function<void(std::shared_ptr<udp_packet>)> accept_slot);
 
+  /**
+   * @brief Write data to specified peer
+  */
+  bool writeto(const peer_t& peer, const char* data, size_t length);
+  bool writeto(const peer_t& peer, const std::string& data);
+
 protected:
   /**
    * @brief Listen on the binded socket
