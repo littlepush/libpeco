@@ -120,6 +120,7 @@ void loopimpl::main() {
     auto idle_gap = (this->timed_list_.size() > 0 ? 
       (this->timed_list_.nearest_time() - TASK_TIME_NOW()) : 
       PECO_TIME_MS(1000));
+    if (idle_gap.count() < 0) continue;
     // wait fd event until idle_gap
     this->wait(idle_gap);
   }
