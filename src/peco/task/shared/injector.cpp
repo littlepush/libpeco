@@ -100,6 +100,7 @@ injector::injector() {
             }
           });
           loopimpl::shared().add_task(work_task);
+          loopimpl::shared().yield_task(work_task);
         }
         if (ret < 0) {
           if (errno == EAGAIN) {
