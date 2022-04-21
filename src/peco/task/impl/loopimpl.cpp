@@ -139,7 +139,7 @@ void loopimpl::exit(int code) {
  * @brief Get the load average of current loop
 */
 double loopimpl::load_average() const {
-  return (double)this->get_wait_time() / (double)(TASK_TIME_NOW() - begin_time_).count();
+  return 1.0 - ((double)this->get_wait_time() / (double)(TASK_TIME_NOW() - begin_time_).count());
 }
 
 /**
