@@ -75,6 +75,10 @@ injector::injector() {
 
   // Set the read pipe to be non-blocking
   fcntl(io_read, F_SETFL, O_NONBLOCK);
+#if PECO_TARGET_LINUX
+  fcntl(io_pipe[0], F_SETPIPE_SZ, 65535);
+  fcntl(io_pipe[1], F_SETPIPE_SZ, 65535);
+#endif
 
   auto t = basic_task::create_task([io_read]() {
     auto this_task = basic_task::running_task();
@@ -100,7 +104,7 @@ injector::injector() {
             }
           });
           loopimpl::shared().add_task(work_task);
-          loopimpl::shared().yield_task(work_task);
+          loopimpl::shared().yield_task(this_task);
         }
         if (ret < 0) {
           if (errno == EAGAIN) {
