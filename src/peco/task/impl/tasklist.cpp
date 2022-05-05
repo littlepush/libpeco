@@ -151,7 +151,7 @@ void tasklist::erase(basic_task_ptr_t t, long fd, EventType event_type) {
 void tasklist::erase(long fd) {
   const static EventType kEventTypePool[] = {kEventTypeRead, kEventTypeWrite};
   if (fd == -1l) return;
-  for (size_t i = 0; i < sizeof(kEventTypePool); ++i) {
+  for (size_t i = 0; i < 2u; ++i) {
     auto fd_range = fd_cache_map_.equal_range(cache_fd_t(fd, kEventTypePool[i]));
     for (auto fd_it = fd_range.first; fd_it != fd_range.second;) {
       // remove related timed list
