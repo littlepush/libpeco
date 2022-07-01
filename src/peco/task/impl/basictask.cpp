@@ -61,8 +61,7 @@ void* __context_main__(void * ptask) {
 #else
 void __context_main__(void * ptask) {
   task_context_t* raw_task = reinterpret_cast<task_context_t *>(ptask);
-  auto worker = raw_task->worker;
-  worker();
+  raw_task->worker();
 }
 #endif
 
