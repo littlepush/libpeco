@@ -603,7 +603,7 @@ bool redis_connector::subscribe(
     if (auto strong_self = weak_self.lock()) {
       strong_self->begin_keepalive_();
     }
-  });
+  }, PECO_CODE_LOCATION);
   return true;
 }
 
@@ -721,7 +721,7 @@ void redis_connector::begin_keepalive_() {
       strong_self->keepalive_task_ = task(kInvalidateTaskId);
       task::this_task().cancel();
     }
-  }, PECO_TIME_S(10));
+  }, PECO_TIME_S(10), PECO_CODE_LOCATION);
 }
 
 } // namespace peco

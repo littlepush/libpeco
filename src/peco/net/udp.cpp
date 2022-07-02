@@ -187,7 +187,7 @@ bool udp_listener::listen(std::function<void(std::shared_ptr<udp_packet>)> accep
         accept_slot(udp_packet::create(self->fd_, peer_t(addr), std::move(buffer)));
       }
     }
-  }).set_atexit([self]() {
+  }, PECO_CODE_LOCATION).set_atexit([self]() {
     self->listened_ = false;
   });
   return true;
@@ -222,7 +222,7 @@ bool udp_listener::listen(listener_adapter::slot_accept_t accept_slot) {
       }
       accept_slot(self->fd_, peer_t(addr));
     }
-  }).set_atexit([self]() {
+  }, PECO_CODE_LOCATION).set_atexit([self]() {
     self->listened_ = false;
   });
   return true;

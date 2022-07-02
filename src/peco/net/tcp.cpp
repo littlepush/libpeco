@@ -164,7 +164,7 @@ bool tcp_listener::listen(listener_adapter::slot_accept_t accept_slot) {
         }
       }
     }
-  });
+  }, PECO_CODE_LOCATION);
   return true;
 }
 /**
