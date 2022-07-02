@@ -92,13 +92,13 @@ loop::~loop() {
 /**
  * @brief Post a 'run' command to the shared loop
 */
-peco::shared::task loop::run(worker_t worker) {
+peco::shared::task loop::run(worker_t worker, const char* name) {
   task_id_t tid = kInvalidateTaskId;
   if (auto ij = ij_.lock()) {
     ij->inject_wait([&]() {
-      auto t = peco::loop::shared()->run(worker);
+      auto t = peco::loop::shared()->run(worker, name);
       tid = t.task_id();
-    }, PECO_TIME_S(1));
+    }, PECO_TIME_S(1), name);
   }
   return peco::shared::task(this->shared_from_this(), tid);
 }
@@ -106,13 +106,13 @@ peco::shared::task loop::run(worker_t worker) {
 /**
  * @brief Post a 'run_loop' command to the shared loop
 */
-peco::shared::task loop::run_loop(worker_t worker, duration_t interval) {
+peco::shared::task loop::run_loop(worker_t worker, duration_t interval, const char* name) {
   task_id_t tid = kInvalidateTaskId;
   if (auto ij = ij_.lock()) {
     ij->inject_wait([&]() {
-      auto t = peco::loop::shared()->run_loop(worker, interval);
+      auto t = peco::loop::shared()->run_loop(worker, interval, name);
       tid = t.task_id();
-    }, PECO_TIME_S(1));
+    }, PECO_TIME_S(1), name);
   }
   return peco::shared::task(this->shared_from_this(), tid);
 }
@@ -120,13 +120,13 @@ peco::shared::task loop::run_loop(worker_t worker, duration_t interval) {
 /**
  * @brief Post a 'run_delay' command to the shared loop
 */
-peco::shared::task loop::run_delay(worker_t worker, duration_t delay) {
+peco::shared::task loop::run_delay(worker_t worker, duration_t delay, const char* name) {
   task_id_t tid = kInvalidateTaskId;
   if (auto ij = ij_.lock()) {
     ij->inject_wait([&]() {
-      auto t = peco::loop::shared()->run_delay(worker, delay);
+      auto t = peco::loop::shared()->run_delay(worker, delay, name);
       tid = t.task_id();
-    }, PECO_TIME_S(1));
+    }, PECO_TIME_S(1), name);
   }
   return peco::shared::task(this->shared_from_this(), tid);
 }
@@ -134,9 +134,9 @@ peco::shared::task loop::run_delay(worker_t worker, duration_t delay) {
 /**
  * @brief block current task/thread to inject the worker
 */
-bool loop::sync_inject(worker_t worker) const {
+bool loop::sync_inject(worker_t worker, const char* name) const {
   if (auto ij = ij_.lock()) {
-    return ij->sync_inject(worker);
+    return ij->sync_inject(worker, name);
   }
   return false;
 }
@@ -144,9 +144,9 @@ bool loop::sync_inject(worker_t worker) const {
 /**
  * @brief block current task/thread until the 'timedout'
 */
-bool loop::inject_wait(worker_t worker, duration_t timedout) const {
+bool loop::inject_wait(worker_t worker, duration_t timedout, const char* name) const {
   if (auto ij = ij_.lock()) {
-    return ij->inject_wait(worker, timedout);
+    return ij->inject_wait(worker, timedout, name);
   }
   return false;
 }
@@ -154,9 +154,9 @@ bool loop::inject_wait(worker_t worker, duration_t timedout) const {
 /**
  * @brief just inject the worker and ignore the response
 */
-void loop::async_inject(worker_t worker) const {
+void loop::async_inject(worker_t worker, const char* name) const {
   if (auto ij = ij_.lock()) {
-    ij->async_inject(worker);
+    ij->async_inject(worker, name);
   }
 }
 

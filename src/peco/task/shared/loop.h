@@ -64,33 +64,33 @@ public:
   /**
    * @brief Post a 'run' command to the shared loop
   */
-  peco::shared::task run(worker_t worker);
+  peco::shared::task run(worker_t worker, const char* name = nullptr);
 
   /**
    * @brief Post a 'run_loop' command to the shared loop
   */
-  peco::shared::task run_loop(worker_t worker, duration_t interval);
+  peco::shared::task run_loop(worker_t worker, duration_t interval, const char* name = nullptr);
 
   /**
    * @brief Post a 'run_delay' command to the shared loop
   */
-  peco::shared::task run_delay(worker_t worker, duration_t delay);
+  peco::shared::task run_delay(worker_t worker, duration_t delay, const char* name = nullptr);
 
 public:
   /**
    * @brief block current task/thread to inject the worker
   */
-  bool sync_inject(worker_t worker) const;
+  bool sync_inject(worker_t worker, const char* name = nullptr) const;
 
   /**
    * @brief block current task/thread until the 'timedout'
   */
-  bool inject_wait(worker_t worker, duration_t timedout) const;
+  bool inject_wait(worker_t worker, duration_t timedout, const char* name = nullptr) const;
 
   /**
    * @brief just inject the worker and ignore the response
   */
-  void async_inject(worker_t worker) const;
+  void async_inject(worker_t worker, const char* name = nullptr) const;
 
 public:
   /**

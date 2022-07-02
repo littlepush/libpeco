@@ -47,7 +47,7 @@ taskqueue::taskqueue() {
       pending_task_list_.pop_front();
       w();
     }
-  });
+  }, PECO_CODE_LOCATION);
 }
 /**
  * @brief Remove all runing worker, and cancel current running jon

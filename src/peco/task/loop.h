@@ -43,15 +43,15 @@ public:
   /**
    * @brief Start a new normal task
   */
-  task run(worker_t worker);
+  task run(worker_t worker, const char* name = nullptr);
   /**
    * @brief Start a loop task
   */
-  task run_loop(worker_t worker, duration_t interval);
+  task run_loop(worker_t worker, duration_t interval, const char* name = nullptr);
   /**
    * @brief Start a task after given <delay>
   */
-  task run_delay(worker_t worker, duration_t delay);
+  task run_delay(worker_t worker, duration_t delay, const char* name = nullptr);
 
 public:
   /**

@@ -317,6 +317,7 @@ uint64_t basic_task::get_flag(size_t index) {
  * @brief Set the task's name
 */
 void basic_task::set_name(const char* name) {
+  if (name == nullptr) return;
   size_t nl = strlen(name);
   size_t cl = (nl > kTaskNameLength ? kTaskNameLength : nl);
   memcpy(extra_->name, name, cl);

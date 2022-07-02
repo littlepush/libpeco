@@ -38,8 +38,9 @@ namespace peco {
 /**
  * @brief Start a new normal task
 */
-task loop::run(worker_t worker) {
+task loop::run(worker_t worker, const char* name) {
   auto inner_task = basic_task::create_task(worker);
+  inner_task->set_name(name);
   // put the new task into the loop wrapper's timed list
   loopimpl::shared().add_task(inner_task);
   return task(inner_task->task_id());
@@ -47,8 +48,9 @@ task loop::run(worker_t worker) {
 /**
  * @brief Start a loop task
 */
-task loop::run_loop(worker_t worker, duration_t interval) {
+task loop::run_loop(worker_t worker, duration_t interval, const char* name) {
   auto inner_task = basic_task::create_task(worker, REPEAT_COUNT_INFINITIVE, interval);
+  inner_task->set_name(name);
   // put the new task into the loop wrapper's timed list
   loopimpl::shared().add_task(inner_task);
   return task(inner_task->task_id());
@@ -56,8 +58,9 @@ task loop::run_loop(worker_t worker, duration_t interval) {
 /**
  * @brief Start a task after given <delay>
 */
-task loop::run_delay(worker_t worker, duration_t delay) {
+task loop::run_delay(worker_t worker, duration_t delay, const char* name) {
   auto inner_task = basic_task::create_task(worker, REPEAT_COUNT_ONESHOT, delay);
+  inner_task->set_name(name);
   // put the new task into the loop wrapper's timed list
   loopimpl::shared().add_task(inner_task);
   return task(inner_task->task_id());

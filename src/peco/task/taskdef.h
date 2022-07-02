@@ -38,6 +38,10 @@ SOFTWARE.
 
 namespace peco {
 
+#define __PECO_S1(x) #x
+#define __PECO_S2(x) __PECO_S1(x)
+#define PECO_CODE_LOCATION __FILE__ " : " __PECO_S2(__LINE__)
+
 /**
  * @brief task id
 */

@@ -55,6 +55,10 @@ typedef struct {
   */
   worker_t *  p_worker;
   /**
+   * @brief Worker name
+  */
+  const char* name;
+  /**
    * @brief When the injection will be timedout
   */
   int64_t     timedout;
@@ -103,6 +107,7 @@ injector::injector() {
               ignore_result(write(ij.io_out, &ret, sizeof(int)));
             }
           });
+          work_task->set_name(ij.name);
           loopimpl::shared().add_task(work_task);
           loopimpl::shared().yield_task(this_task);
         }
@@ -147,6 +152,7 @@ injector::injector() {
     // close the pipe
     close(io_read);
   });
+  t->set_name(PECO_CODE_LOCATION);
   ij_task_ = t->task_id();
   loopimpl::shared().add_task(t);
   t->set_atexit([this]() {
@@ -183,7 +189,7 @@ void injector::disable() {
 /**
  * @brief block current task/thread to inject the worker
 */
-bool injector::sync_inject(worker_t worker) const {
+bool injector::sync_inject(worker_t worker, const char* name) const {
   if (io_write_ == -1) {
     log::alert << "async_inject on a disabled inject" << std::endl;
     return false;
@@ -201,6 +207,7 @@ bool injector::sync_inject(worker_t worker) const {
 
   InjectorInfo ij;
   ij.p_worker = new worker_t(worker);
+  ij.name = name;
   ij.timedout = -1;
   ij.io_out = ij_io->p[1];
 
@@ -238,7 +245,7 @@ bool injector::sync_inject(worker_t worker) const {
 /**
  * @brief block current task/thread until the 'timedout'
 */
-bool injector::inject_wait(worker_t worker, duration_t timedout) const {
+bool injector::inject_wait(worker_t worker, duration_t timedout, const char* name) const {
   if (io_write_ == -1) {
     log::alert << "async_inject on a disabled inject" << std::endl;
     return false;
@@ -258,6 +265,7 @@ bool injector::inject_wait(worker_t worker, duration_t timedout) const {
 
   InjectorInfo ij;
   ij.p_worker = new worker_t(worker);
+  ij.name = name;
   ij.timedout = real_time_out.time_since_epoch().count();
   ij.io_out = ij_io->p[1];
 
@@ -290,13 +298,14 @@ bool injector::inject_wait(worker_t worker, duration_t timedout) const {
 /**
  * @brief just inject the worker and ignore the response
 */
-void injector::async_inject(worker_t worker) const {
+void injector::async_inject(worker_t worker, const char* name) const {
   if (io_write_ == -1) {
     log::alert << "async_inject on a disabled inject" << std::endl;
     return;
   }
   InjectorInfo ij;
   ij.p_worker = new worker_t(worker);
+  ij.name = name;
   ij.timedout = -1;
   ij.io_out = -1;
 

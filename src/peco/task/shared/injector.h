@@ -72,17 +72,17 @@ public:
    * @brief block current task/thread to inject the worker
    * @note do not use this method in destructor
   */
-  bool sync_inject(worker_t worker) const;
+  bool sync_inject(worker_t worker, const char* name = nullptr) const;
 
   /**
    * @brief block current task/thread until the 'timedout'
   */
-  bool inject_wait(worker_t worker, duration_t timedout) const;
+  bool inject_wait(worker_t worker, duration_t timedout, const char* name = nullptr) const;
 
   /**
    * @brief just inject the worker and ignore the response
   */
-  void async_inject(worker_t worker) const;
+  void async_inject(worker_t worker, const char* name = nullptr) const;
 protected:
   std::atomic<int> io_write_;
   task_id_t ij_task_;
