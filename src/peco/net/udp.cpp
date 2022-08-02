@@ -32,6 +32,7 @@ SOFTWARE.
 #include "peco/net/udp.h"
 #include "peco/net/bind.h"
 #include "peco/net/connect.h"
+#include "peco/utils.h"
 
 namespace peco {
 
@@ -207,12 +208,19 @@ bool udp_listener::listen(listener_adapter::slot_accept_t accept_slot) {
 
     struct sockaddr_in addr;
     socklen_t addr_len = sizeof(addr);
-    while (true) {
-      task::this_task().wait_fd_for_event(self->fd_, kEventTypeRead, PECO_TIME_S(1800));
+    while (!task::this_task().is_cancelled()) {
+      task::this_task().wait_fd_for_event(self->fd_, kEventTypeRead, PECO_TIME_S(10));
       auto sig = task::this_task().signal();
       if (sig == kWaitingSignalBroken) {
+        if (task::this_task().is_cancelled()) {
+          log::info << "quit udp listening loop" << std::endl;
+          break;
+        } else {
+          log::warning << "udp listening loop error, get broken sig, try again" << std::endl;
+          continue;
+        }
         // task cancelled
-        return;
+        // return;
       }
       if (sig == kWaitingSignalNothing) continue;
       size_t l = ::recvfrom(self->fd_, NULL, 0, MSG_PEEK, (struct sockaddr *)&addr, &addr_len);
