@@ -53,21 +53,17 @@ void test_case() {
   auto rc = peco::redis_connector::create(redis_connection_string);
   if (!rc->connect()) {
     peco::log::error << "failed to connect to redis server" << std::endl;
-    peco::loop::shared()->exit(1);
+    peco::current_loop::exit(1);
     return;
   }
   peco::log::info << "connected to redis server" << std::endl;
   rc->query("SET", "PECO_TEST", "net_ext_redis");
   auto r = rc->query("GET", "PECO_TEST");
   peco::log::info << r << std::endl;
-  peco::loop::shared()->exit(0);
+  peco::current_loop::exit(0);
 }
 
 int main() {
-  auto l = peco::shared::loop::create();
-  l->run(test_case);
-  l->sync_inject([]() {
-    peco::task::this_task().holding();
-  });
-  return 0;
+  peco::current_loop::run(test_case);
+  return peco::current_loop::main();
 }

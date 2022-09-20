@@ -57,13 +57,6 @@ add_library(peco ${PECO_LIB_TYPE}
 set_target_properties(peco PROPERTIES LINKER_LANGUAGE CXX)
 set_property(TARGET peco PROPERTY CXX_STANDARD 14)
 
-
-if (${INCLUDE_TASK_SHARED})
-  target_compile_definitions(peco PUBLIC "-DPECO_ENABLE_SHARETASK=1")
-else()
-  target_compile_definitions(peco PUBLIC "-DPECO_ENABLE_SHARETASK=0")
-endif()
-
 target_compile_options(peco PRIVATE
   "$<$<CONFIG:Debug>:${PECO_CXX_FLAGS_DEBUG}>"
   "$<$<CONFIG:Release>:${PECO_CXX_FLAGS_RELEASE}>"

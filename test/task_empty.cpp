@@ -32,7 +32,7 @@ SOFTWARE.
 #include "peco.h"
 
 int main(int argc, char* argv[]) {
-  int ret = peco::loop::shared()->main();
+  int ret = peco::current_loop::main();
   peco::log::debug << "return code is: " << ret << std::endl;
   return 0;
 }

@@ -43,7 +43,7 @@ void udp_read_test() {
       }
       peco::log::debug << r.data << std::endl;
     }
-    peco::loop::shared()->exit(0);
+    peco::current_loop::exit(0);
   });
 
   auto uc = peco::udp_connector::create();
@@ -54,7 +54,7 @@ void udp_read_test() {
 }
 
 int main() {
-  peco::loop::shared()->run(udp_read_test);
-  peco::loop::shared()->main();
+  peco::current_loop::run(udp_read_test);
+  peco::current_loop::main();
   return 0;
 }

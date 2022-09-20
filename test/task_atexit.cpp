@@ -45,8 +45,8 @@ void task_1() {
 }
 
 int main() {
-  peco::loop::shared()->run(task_1);
-  peco::ignore_result(peco::loop::shared()->main());
+  peco::current_loop::run(task_1);
+  peco::ignore_result(peco::current_loop::main());
   assert(exited);
   return 0;
 }

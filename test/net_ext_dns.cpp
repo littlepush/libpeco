@@ -41,7 +41,7 @@ void co_main() {
 }
 
 int main() {
-  peco::loop::shared()->run(co_main);
-  peco::loop::shared()->main();
+  peco::current_loop::run(co_main);
+  peco::current_loop::main();
   return 0;
 }

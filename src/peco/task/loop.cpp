@@ -93,10 +93,7 @@ void loop::exit(int code) {
 /**
  * @brief Get current thread's shared loop object
 */
-std::shared_ptr<loop>& loop::shared() {
-  thread_local static std::shared_ptr<loop> s_loop(new loop);
-  return s_loop;
-}
+thread_local loop loop::current;
 
 /**
  * @brief D'stor
@@ -111,6 +108,50 @@ loop::~loop() {
 loop::loop() {
   // initialize the thread localed loop wrapper
 }
+
+
+/**
+ * @brief Current Loop API wrapper
+*/
+namespace current_loop {
+/**
+ * @brief Start a new normal task
+*/
+task run(worker_t worker, const char* name) {
+  return loop::current.run(worker, name);
+}
+/**
+ * @brief Start a loop task
+*/
+task run_loop(worker_t worker, duration_t interval, const char* name) {
+  return loop::current.run_loop(worker, interval, name);
+}
+/**
+ * @brief Start a task after given <delay>
+*/
+task run_delay(worker_t worker, duration_t delay, const char* name) {
+  return loop::current.run_delay(worker, delay, name);
+}
+/**
+ * @brief Entrypoint of current loop, will block current thread
+*/
+int main() {
+  return loop::current.main();
+}
+/**
+ * @brief Get current loop's load average
+*/
+double load_average() {
+  return loop::current.load_average();
+}
+/**
+ * @brief Invoke in any task, which will case current loop to break and return from main
+*/
+void exit(int code) {
+  loop::current.exit(code);
+}
+
+} // namespace current_loop
 
 } // namespace peco 
 

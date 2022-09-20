@@ -38,7 +38,7 @@ SOFTWARE.
 
 namespace peco {
 
-class loop : public std::enable_shared_from_this<loop> {
+class loop {
 public:
   /**
    * @brief Start a new normal task
@@ -74,7 +74,7 @@ public:
   /**
    * @brief Get current thread's shared loop object
   */
-  static std::shared_ptr<loop>& shared();
+  static thread_local loop current;
 
 public:
   /**
@@ -88,6 +88,37 @@ protected:
   */
   loop();
 };
+
+/**
+ * @brief Current Loop API wrapper
+*/
+namespace current_loop {
+/**
+ * @brief Start a new normal task
+*/
+task run(worker_t worker, const char* name = nullptr);
+/**
+ * @brief Start a loop task
+*/
+task run_loop(worker_t worker, duration_t interval, const char* name = nullptr);
+/**
+ * @brief Start a task after given <delay>
+*/
+task run_delay(worker_t worker, duration_t delay, const char* name = nullptr);
+/**
+ * @brief Entrypoint of current loop, will block current thread
+*/
+int main();
+/**
+ * @brief Get current loop's load average
+*/
+double load_average();
+/**
+ * @brief Invoke in any task, which will case current loop to break and return from main
+*/
+void exit(int code = 0);
+
+} // namespace current_loop
 
 }
 

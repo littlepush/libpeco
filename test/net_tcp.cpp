@@ -32,8 +32,7 @@ SOFTWARE.
 #include "peco.h"
 
 int main() {
-  auto l = peco::shared::loop::create();
-  l->run([]() {
+  peco::current_loop::run([]() {
     auto tl = peco::tcp_listener::create();
     tl->bind("0.0.0.0:12345");
     tl->listen([](std::shared_ptr<peco::tcp_connector> incoming) {
@@ -42,15 +41,16 @@ int main() {
     });
   });
 
-  l->run_delay([]() {
+  peco::current_loop::run_delay([]() {
     auto c = peco::tcp_connector::create();
     c->connect("127.0.0.1:12345");
     c->write("hello peco", 10);
     peco::task::this_task().sleep(PECO_TIME_MS(100));
   }, PECO_TIME_S(1));
 
-  l->sync_inject([]() {
-    peco::task::this_task().sleep(PECO_TIME_S(2));
-  });
-  return 0;
+  peco::current_loop::run_delay([]() {
+    peco::current_loop::exit(0);
+  }, PECO_TIME_S(2));
+
+  return peco::current_loop::main();
 }

@@ -58,10 +58,10 @@ void task_3() {
 }
 
 int main() {
-  peco::loop::shared()->run(task_1);
-  peco::loop::shared()->run(task_2);
-  peco::loop::shared()->run(task_3);
-  peco::ignore_result(peco::loop::shared()->main());
+  peco::current_loop::run(task_1);
+  peco::current_loop::run(task_2);
+  peco::current_loop::run(task_3);
+  peco::ignore_result(peco::current_loop::main());
   assert(running_order.size() == 30);
   for (int i = 0; i < 10; ++i) {
     for (int j = 0; j < 3; ++j) {

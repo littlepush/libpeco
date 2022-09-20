@@ -42,6 +42,6 @@ void begin_listen() {
 }
 
 int main() {
-  peco::loop::shared()->run(begin_listen);
-  return peco::loop::shared()->main();
+  peco::current_loop::run(begin_listen);
+  return peco::current_loop::main();
 }

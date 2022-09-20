@@ -567,7 +567,7 @@ bool redis_connector::subscribe(
   }
 
   std::weak_ptr<redis_connector> weak_self = this->shared_from_this();
-  subscribe_task_ = loop::shared()->run([weak_self, cmd = std::move(cmd), cb]() {
+  subscribe_task_ = loop::current.run([weak_self, cmd = std::move(cmd), cb]() {
     while (!task::this_task().is_cancelled()) {
       auto strong_self = weak_self.lock();
       // the redis connector has already been destroied
@@ -710,7 +710,7 @@ void redis_connector::begin_keepalive_() {
   }
 
   if (!this->is_validate()) return;
-  keepalive_task_ = loop::shared()->run_loop([weak_self]() {
+  keepalive_task_ = loop::current.run_loop([weak_self]() {
     if (auto strong_self = weak_self.lock()) {
       // all correct
       if (strong_self->connection_test()) return;

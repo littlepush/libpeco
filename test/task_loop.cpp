@@ -47,8 +47,8 @@ void peco_loop_task() {
 }
 
 int main() {
-  peco::loop::shared()->run_loop(peco_loop_task, PECO_TIME_MS(10));
-  peco::ignore_result(peco::loop::shared()->main());
+  peco::current_loop::run_loop(peco_loop_task, PECO_TIME_MS(10));
+  peco::ignore_result(peco::current_loop::main());
   peco::log::debug << "repeat_count: " << repeat_count << ", max_repeat_count: " << max_repeat_count << std::endl;
   return 0;
 }

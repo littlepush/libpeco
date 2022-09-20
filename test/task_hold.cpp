@@ -37,7 +37,7 @@ void task_sleep() {
   // This task will sleep 3 seconds
   peco::task::this_task().sleep(PECO_TIME_S(3));
   // after wakeup, exit the loop
-  peco::loop::shared()->exit(0);
+  peco::current_loop::exit(0);
 }
 
 void task_hold() {
@@ -73,19 +73,19 @@ void task_wakeup(peco::task t) {
 }
 
 int main() {
-  peco::task s_task = peco::loop::shared()->run(task_sleep);
-  peco::loop::shared()->run(task_hold);
-  peco::task hw_task = peco::loop::shared()->run(task_hold_until_and_wakeup);
-  peco::loop::shared()->run(task_hold_until_and_timeout);
-  peco::loop::shared()->run_delay([hw_task]() {
+  peco::task s_task = peco::current_loop::run(task_sleep);
+  peco::current_loop::run(task_hold);
+  peco::task hw_task = peco::current_loop::run(task_hold_until_and_wakeup);
+  peco::current_loop::run(task_hold_until_and_timeout);
+  peco::current_loop::run_delay([hw_task]() {
     task_wakeup(hw_task);
   }, PECO_TIME_MS(200));
   int wake_up_sleep_times = 0;
-  peco::loop::shared()->run_loop([s_task, &wake_up_sleep_times]() {
+  peco::current_loop::run_loop([s_task, &wake_up_sleep_times]() {
     task_wakeup(s_task);
     wake_up_sleep_times += 1;
   }, PECO_TIME_MS(100));
-  peco::ignore_result(peco::loop::shared()->main());
+  peco::ignore_result(peco::current_loop::main());
   assert(wake_up_sleep_times > 1);
   assert(hold_task_is_wakedup);
   peco::log::debug << "test done, please check the time with last log, should be almost the same" << std::endl;

@@ -55,7 +55,7 @@ void begin_listen_packet() {
   auto l = peco::udp_listener::create();
   l->bind("0.0.0.0:10054");
   l->listen([](std::shared_ptr<peco::udp_packet> pkt) {
-    peco::loop::shared()->run([=]() {
+    peco::current_loop::run([=]() {
       auto outgoing = peco::udp_connector::create();
       outgoing->connect("192.168.1.1:53");
       outgoing->write(pkt->data());
@@ -70,7 +70,7 @@ void begin_listen_packet() {
 }
 
 int main() {
-  peco::loop::shared()->run(begin_listen);
-  peco::loop::shared()->run(begin_listen_packet);
-  return peco::loop::shared()->main();
+  peco::current_loop::run(begin_listen);
+  peco::current_loop::run(begin_listen_packet);
+  return peco::current_loop::main();
 }

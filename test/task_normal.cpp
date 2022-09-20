@@ -39,11 +39,11 @@ void peco_main(int argc, char* argv[]) {
 
 int main(int argc, char* argv[]) {
   auto t = std::thread([=]() {
-    peco::loop::shared()->run([=]() {
+    peco::current_loop::run([=]() {
       peco_main(argc, argv);
-      peco::loop::shared()->exit(1);
+      peco::current_loop::exit(1);
     });
-    int rcode = peco::loop::shared()->main();
+    int rcode = peco::current_loop::main();
     peco::log::debug << "loop exit with code: " << rcode << std::endl;
   });
   t.join();

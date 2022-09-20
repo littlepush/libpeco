@@ -116,7 +116,7 @@ bool uds_listener::listen(listener_adapter::slot_accept_t accept_slot) {
   }
 
   auto self = this->shared_from_this();
-  loop::shared()->run([=]() {
+  loop::current.run([=]() {
     std::string task_name = "uds_listen:" + local_path_;
     task::this_task().set_name(task_name.c_str());
     while (true) {
@@ -137,7 +137,7 @@ bool uds_listener::listen(listener_adapter::slot_accept_t accept_slot) {
           // On error
           return;
         } else {
-          loop::shared()->run([=]() {
+          loop::current.run([=]() {
             accept_slot(in_fd, peer_t::nan);
           });
         }

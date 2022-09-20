@@ -137,7 +137,7 @@ bool tcp_listener::listen(listener_adapter::slot_accept_t accept_slot) {
   }
 
   auto self = this->shared_from_this();
-  loop::shared()->run([=]() {
+  loop::current.run([=]() {
     std::string task_name = "tcp_listen:" + std::to_string(net_utils::localport(fd_));
     task::this_task().set_name(task_name.c_str());
     while (true) {
@@ -158,7 +158,7 @@ bool tcp_listener::listen(listener_adapter::slot_accept_t accept_slot) {
           // On error
           return;
         } else {
-          loop::shared()->run([=]() {
+          loop::current.run([=]() {
             accept_slot(in_fd, net_utils::socket_peerinfo(in_fd));
           });
         }

@@ -39,7 +39,7 @@ void pending_task() {
   } else {
     peco::log::error << "task has been cancelled" << std::endl;
   }
-  peco::loop::shared()->exit(0);
+  peco::current_loop::exit(0);
 }
 
 void pending_task_until() {
@@ -52,7 +52,7 @@ void pending_task_until() {
 }
 
 int main() {
-  peco::loop::shared()->run(pending_task);
-  peco::loop::shared()->run(pending_task_until);
-  return peco::loop::shared()->main();
+  peco::current_loop::run(pending_task);
+  peco::current_loop::run(pending_task_until);
+  return peco::current_loop::main();
 }

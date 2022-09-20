@@ -40,7 +40,7 @@ void child_task() {
 
 void parent_task() {
   peco::log::debug << "in parent task" << std::endl;
-  peco::loop::shared()->run_delay(child_task, PECO_TIME_MS(100));
+  peco::current_loop::run_delay(child_task, PECO_TIME_MS(100));
   // will get wakeup signal after 100ms
   bool flag = peco::task::this_task().holding_until(PECO_TIME_MS(1000));
   if (flag) {
@@ -50,8 +50,8 @@ void parent_task() {
 }
 
 int main() {
-  peco::loop::shared()->run(parent_task);
-  peco::ignore_result(peco::loop::shared()->main());
+  peco::current_loop::run(parent_task);
+  peco::ignore_result(peco::current_loop::main());
   assert(in_child_task);
   return 0;
 }

@@ -144,7 +144,7 @@ bool udp_listener::listen(std::function<void(std::shared_ptr<udp_connector>)> ac
     net_utils::keepalive(fd_, true);
     this->bind_slot_(fd_);
     // Do the accept slot
-    loop::shared()->run([=]() {
+    loop::current.run([=]() {
       accept_slot(incoming);
     });
   });
@@ -157,7 +157,7 @@ bool udp_listener::listen(std::function<void(std::shared_ptr<udp_packet>)> accep
   listened_ = true;
   
   auto self = this->shared_from_this();
-  loop::shared()->run([self, accept_slot]() {
+  loop::current.run([self, accept_slot]() {
     std::string task_name = "udp_listen_packet:" + std::to_string(net_utils::localport(self->fd_));
     task::this_task().set_name(task_name.c_str());
 
@@ -202,7 +202,7 @@ bool udp_listener::listen(listener_adapter::slot_accept_t accept_slot) {
   listened_ = true;
 
   auto self = this->shared_from_this();
-  loop::shared()->run([=]() {
+  loop::current.run([=]() {
     std::string task_name = "udp_listen:" + std::to_string(net_utils::localport(fd_));
     task::this_task().set_name(task_name.c_str());
 

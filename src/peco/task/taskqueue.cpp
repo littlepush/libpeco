@@ -41,7 +41,7 @@ std::shared_ptr<taskqueue> taskqueue::create() {
 }
 
 taskqueue::taskqueue() {
-  inner_t_ = loop::shared()->run([&]() {
+  inner_t_ = loop::current.run([&]() {
     while( !task::this_task().is_cancelled() && this->sem_.fetch() ) {
       auto w = pending_task_list_.front();
       pending_task_list_.pop_front();

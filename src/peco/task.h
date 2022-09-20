@@ -40,12 +40,6 @@ SOFTWARE.
 #include "peco/task/semaphore.h"
 #include "peco/task/signal.h"
 
-#if PECO_ENABLE_SHARETASK
-#include "peco/task/shared/loop.h"
-#include "peco/task/shared/injector.h"
-#include "peco/task/shared/task.h"
-#endif
-
 #endif
 
 // Push Chen
