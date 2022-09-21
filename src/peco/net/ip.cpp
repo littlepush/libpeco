@@ -31,15 +31,32 @@ SOFTWARE.
 
 #include "peco/net/ip.h"
 
+#if PECO_TARGET_WIN
+#include <WS2tcpip.h>
+#endif
+
 namespace peco {
 // Internal Conversition Methods
 uint32_t __ipstring2inaddr(const std::string& ipstring) {
+#if PECO_TARGET_WIN
+  IN_ADDR addr;
+  auto ret = inet_pton(AF_INET, ipstring.c_str(), &addr);
+  if (ret > 0) {
+    return addr.s_addr;
+  }
+  return (uint32_t)-1;
+#else
   return inet_addr(ipstring.c_str());
+#endif
 }
 
 void __inaddr2ipstring(uint32_t inaddr, std::string& ipstring) {
   ipstring.resize(16);
+#if PECO_TARGET_WIN
+  int _l = sprintf_s( &ipstring[0], 16, "%u.%u.%u.%u",
+#else
   int _l = sprintf( &ipstring[0], "%u.%u.%u.%u",
+#endif
     (inaddr >> (0 * 8)) & 0x00FF,
     (inaddr >> (1 * 8)) & 0x00FF,
     (inaddr >> (2 * 8)) & 0x00FF,

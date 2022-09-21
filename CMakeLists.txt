@@ -30,7 +30,8 @@ cmake_policy(SET CMP0042 NEW)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -127,15 +128,15 @@ else()
 endif()
 
 if (PECO_PLATFORM_WINDOWS)
-  set(PECO_CXX_FLAGS_DEBUG "/MP;/W3;/ZI;/TP;/DWIN32;/bigobj;/Od;/MTd;/DDEBUG=1")
-  set(PECO_CXX_FLAGS_RELEASE "/MP;/W3;/ZI;/TP;/DWIN32;/bigobj;/DNDEBUG=1;/DRELEASE=1;/MT;/Ox")
+  set(PECO_CXX_FLAGS_DEBUG "/MP;/W3;/Zi;/TP;/DWIN32;/bigobj;/Od;/MTd;/DDEBUG=1")
+  set(PECO_CXX_FLAGS_RELEASE "/MP;/W3;/Zi;/TP;/DWIN32;/bigobj;/DNDEBUG=1;/DRELEASE=1;/MT;/Ox")
 
   if ( CMAKE_CL_64 )
     set(PECO_CXX_FLAGS_DEBUG "${PECO_CXX_FLAGS_DEBUG};/DWIN64")
     set(PECO_CXX_FLAGS_RELEASE "${PECO_CXX_FLAGS_RELEASE}/DWIN64")
   endif()
 
-  add_definitions(NOMINMAX=1)
+  add_definitions(-DNOMINMAX=1)
 else()
   set(PECO_CXX_FLAGS_DEBUG "-fPIC;-fmerge-all-constants;-O0;-g;-DDEBUG=1;-Wall;-Werror;-Wno-unneeded-internal-declaration")
   set(PECO_CXX_FLAGS_RELEASE "-fPIC;-fmerge-all-constants;-O3;-DNDEBUG=1;-DRELEASE=1;-Wall;-Werror;-Wno-unneeded-internal-declaration")

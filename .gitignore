@@ -44,3 +44,6 @@ libtool
 
 # Cmake output
 src/peco.h
+
+# Visual Studio
+.vs

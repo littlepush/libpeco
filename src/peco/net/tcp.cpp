@@ -30,6 +30,7 @@ SOFTWARE.
 */
 
 #include "peco/net/tcp.h"
+#include "peco/utils/stringutil.h"
 #include "peco/utils/logs.h"
 #include "peco/net/bind.h"
 #include "peco/net/connect.h"
@@ -132,7 +133,7 @@ bool tcp_listener::bind(const std::string& local_addr) {
 */
 bool tcp_listener::listen(listener_adapter::slot_accept_t accept_slot) {
   if ( -1 == ::listen(fd_, CO_MAX_SO_EVENTS) ) {
-    log::error << "failed to listen on socket(" << fd_ << "), error: " << ::strerror(errno) << std::endl;
+    log::error << "failed to listen on socket(" << fd_ << "), error: " << get_sys_error(errno) << std::endl;
     return false;
   }
 

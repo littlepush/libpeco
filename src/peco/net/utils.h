@@ -39,7 +39,12 @@ SOFTWARE.
 
 namespace peco {
 
+#if PECO_TARGET_WIN
+typedef int socklen_t;
+typedef SOCKET SOCKET_T;
+#else
 typedef long SOCKET_T;
+#endif
 
 #ifndef INVALIDATE_SOCKET
 #define INVALIDATE_SOCKET           ((long)((long)0 - (long)1))

@@ -30,8 +30,10 @@ SOFTWARE.
 */
 
 #include "peco/utils/stringutil.h"
+#include <string.h>
 #include <cstdio>
 #include <fcntl.h>
+#include <sstream>
 #if PECO_TARGET_WIN
 #include <iomanip>
 #endif
@@ -263,6 +265,19 @@ time_t dtot(const std::string &dstr, const std::string &fmt) {
   _input >> std::get_time(&_tm, fmt.c_str());
 #endif
   return std::mktime(&_tm);
+}
+
+/**
+ * @brief Get system error code's string message
+*/
+std::string get_sys_error(int code) {
+  char buf[128] = {'\0'};
+#if PECO_TARGET_WIN
+  ignore_result(strerror_s(buf, 127, code));
+#else
+  ignore_result(strerror_r(code, buf, 127));
+#endif
+  return std::string(buf);
 }
 
 } // namespace peco

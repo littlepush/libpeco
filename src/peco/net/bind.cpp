@@ -76,7 +76,7 @@ bool peer_bind::operator()(SOCKET_T fd) {
 
   if ( ::bind(fd, (struct sockaddr *)&sock_addr, sizeof(sock_addr)) == -1 ) {
     log::error << "Failed to bind tcp socket on: " << bind_addr_
-        << ", " << ::strerror( errno ) << std::endl;
+        << ", " << get_sys_error( errno ) << std::endl;
     return false;
   }
   return true;
@@ -131,7 +131,7 @@ bool path_bind::operator()(SOCKET_T fd) {
 
   if ( ::bind(fd, (struct sockaddr*)&addr, addrlen) < 0 ) {
     log::error << "Failed to bind uds socket on: " << bind_path_
-        << ", " << ::strerror( errno ) << std::endl;
+        << ", " << get_sys_error( errno ) << std::endl;
     return false;
   }
   return true;

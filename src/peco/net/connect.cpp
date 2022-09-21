@@ -30,6 +30,7 @@ SOFTWARE.
 */
 
 #include "peco/net/connect.h"
+#include "peco/utils/stringutil.h"
 #include "peco/utils/logs.h"
 
 #if !PECO_TARGET_WIN
@@ -75,7 +76,7 @@ bool tcp_connect::operator()(SOCKET_T fd) {
     getsockopt(fd, SOL_SOCKET, SO_ERROR, (char *)&err, (socklen_t *)&len);
     if (err != 0) {
       log::error << "Error: Failed to connect to " << dest_addr_ << 
-        " on tcp socket(" << fd << "), " << err << ":" << ::strerror(err) << std::endl;
+        " on tcp socket(" << fd << "), " << err << ":" << get_sys_error(err) << std::endl;
       return false;
     } else {
       task::this_task().wait_fd_for_event(fd, kEventTypeWrite, timeout_);
@@ -92,7 +93,7 @@ bool tcp_connect::operator()(SOCKET_T fd) {
             << "not allowed to continue process connecting event" << std::endl;
         } else {
           log::error << "Error: Failed to connect to " << dest_addr_ <<
-            " on tcp socket(" << fd << "), err: " << err << ", " << ::strerror(err) <<
+            " on tcp socket(" << fd << "), err: " << err << ", " << get_sys_error(err) <<
             std::endl;
         }
         return false;
@@ -135,7 +136,7 @@ bool udp_connect::operator()(SOCKET_T fd) {
   struct sockaddr_in sock_addr = dest_addr_;
   if ( ::connect(fd, (struct sockaddr *)&sock_addr, sizeof(sock_addr)) == -1 ) {
     log::error << "Error: Failed to connect to " << dest_addr_ <<
-      " on udp socket(" << fd << "), " << ::strerror(errno) <<
+      " on udp socket(" << fd << "), " << get_sys_error(errno) <<
       std::endl;
     return false;
   }
@@ -181,7 +182,7 @@ bool uds_connect::operator()(SOCKET_T fd) {
 
   if ( -1 == ::connect(fd, (struct sockaddr *)&peeraddr, addrlen) ) {
     log::error << "Error: Failed to connect to " << dest_addr_ << 
-      " on uds socket(" << fd << "), " << ::strerror( errno ) <<
+      " on uds socket(" << fd << "), " << get_sys_error( errno ) <<
       std::endl;
     return false;
   }

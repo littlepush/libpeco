@@ -213,6 +213,11 @@ bool is_number(const std::string &nstr);
 time_t dtot(const std::string &dstr);
 time_t dtot(const std::string &dstr, const std::string &fmt);
 
+/**
+ * @brief Get system error code's string message
+*/
+std::string get_sys_error(int code);
+
 } // namespace peco
 
 #endif

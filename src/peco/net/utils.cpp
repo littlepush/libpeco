@@ -467,7 +467,7 @@ size_t read(SOCKET_T hSo, char *buffer, size_t length,
         return _received;
       }
       log::error << "Error: failed to receive data on socket(" << hSo << "), "
-                 << ::strerror(errno) << std::endl;
+                 << get_sys_error(errno) << std::endl;
       return 0;
     } else if (_retCode == 0) {
       return 0;
@@ -503,7 +503,7 @@ bool read(std::string& buffer,
       // Other error
       _buffer.resize(0);
       log::error << "Error: Failed to receive data on socket(" << hSo << ", "
-                 << ::strerror(errno) << std::endl;
+                 << get_sys_error(errno) << std::endl;
       return false;
     } else if (_retCode == 0) {
       // Peer Close
@@ -554,7 +554,7 @@ int write(SOCKET_T hSo, const char *data, size_t data_lenth,
         break;
       } else {
         log::warning << "Failed to send data on socket(" << hSo << "), "
-                     << ::strerror(errno) << std::endl;
+                     << get_sys_error(errno) << std::endl;
         return _ret;
       }
     } else if (_ret == 0) {

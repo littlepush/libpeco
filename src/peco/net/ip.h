@@ -41,7 +41,7 @@ SOFTWARE.
 #include <winsock2.h>
 #define SO_NETWORK_NOSIGNAL           0
 #define SO_NETWORK_IOCTL_CALL         ioctlsocket
-#define SO_NETWORK_CLOSESOCK          close
+#define SO_NETWORK_CLOSESOCK          closesocket
 
 #else
 

@@ -23,7 +23,7 @@
 #include "peco/pecostd.h"
 
 #if PECO_TARGET_WIN
-#include "peco/cotask/windows/ucontext.hxx"
+#include "peco/task/windows/ucontext.hxx"
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -68,6 +68,9 @@ int makecontext(ucontext_t *ucp, void (*func)(), int argc, ...)
 #if defined(_X86_)
 	ucp->uc_mcontext.Eip = (unsigned long long) func;
 	ucp->uc_mcontext.Esp = (unsigned long long) (sp - 4);
+#elif defined(_M_ARM64)
+    ucp->uc_mcontext.Sp = (unsigned long long)(sp - 40);
+    ucp->uc_mcontext.Pc = (unsigned long long)func;
 #else
 	ucp->uc_mcontext.Rip = (unsigned long long) func;
 	ucp->uc_mcontext.Rsp = (unsigned long long) (sp - 40);
