@@ -136,6 +136,19 @@ extern "C" {
 #define PECO_USE_GNU 0
 #endif
 
+#define PECO_IS_SHARED  (PECO_LIB_STATIC == 0 && PECO_LIB_SHARED == 1)
+#define PECO_IS_STATIC  (PECO_LIB_STATIC == 1 && PECO_LIB_SHARED == 0)
+
+#if PECO_TARGET_WIN && PECO_IS_SHARED
+#if defined(PECO_IS_BUILDING) && (PECO_IS_BUILDING == 1)
+#define PECO_VISIABLE   __declspec(dllexport)
+#else
+#define PECO_VISIABLE   __declspec(dllimport)
+#endif
+#else
+#define PECO_VISIABLE
+#endif
+
 namespace peco {
 
 template <typename T> inline void ignore_result(T unused_result) {

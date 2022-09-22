@@ -93,7 +93,10 @@ void loop::exit(int code) {
 /**
  * @brief Get current thread's shared loop object
 */
-thread_local loop loop::current;
+loop& loop::current() {
+  static thread_local loop g_cur;
+  return g_cur;
+}
 
 /**
  * @brief D'stor
@@ -118,37 +121,37 @@ namespace current_loop {
  * @brief Start a new normal task
 */
 task run(worker_t worker, const char* name) {
-  return loop::current.run(worker, name);
+  return loop::current().run(worker, name);
 }
 /**
  * @brief Start a loop task
 */
 task run_loop(worker_t worker, duration_t interval, const char* name) {
-  return loop::current.run_loop(worker, interval, name);
+  return loop::current().run_loop(worker, interval, name);
 }
 /**
  * @brief Start a task after given <delay>
 */
 task run_delay(worker_t worker, duration_t delay, const char* name) {
-  return loop::current.run_delay(worker, delay, name);
+  return loop::current().run_delay(worker, delay, name);
 }
 /**
  * @brief Entrypoint of current loop, will block current thread
 */
 int main() {
-  return loop::current.main();
+  return loop::current().main();
 }
 /**
  * @brief Get current loop's load average
 */
 double load_average() {
-  return loop::current.load_average();
+  return loop::current().load_average();
 }
 /**
  * @brief Invoke in any task, which will case current loop to break and return from main
 */
 void exit(int code) {
-  loop::current.exit(code);
+  loop::current().exit(code);
 }
 
 } // namespace current_loop

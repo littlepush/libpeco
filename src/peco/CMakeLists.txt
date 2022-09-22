@@ -35,18 +35,6 @@ if (${INCLUDE_MODULE_NET})
   endif()
 endif()
 
-if (NOT DEFINED PECO_STATIC)
-  set(_PECO_BUILD_STATIC_OPTION OFF)
-else()
-  set(_PECO_BUILD_STATIC_OPTION ${PECO_STATIC})
-endif()
-option(PECO_BUILD_STATIC "Build Static Library, default is OFF" ${_PECO_BUILD_STATIC_OPTION})
-if (PECO_BUILD_STATIC)
-  set(PECO_LIB_TYPE STATIC)
-else()
-  set(PECO_LIB_TYPE SHARED)
-endif()
-
 add_library(peco ${PECO_LIB_TYPE} 
   ${LIBPECO_SRC_LIST} 
   ${LIBPECO_UTILS_SRC} 
@@ -54,6 +42,7 @@ add_library(peco ${PECO_LIB_TYPE}
   ${LIBPECO_CONET_SRC} 
   ${LIBPECO_EXTENSIONS_SRC}
 )
+target_compile_definitions(peco PRIVATE "PECO_IS_BUILDING=1")
 set_target_properties(peco PROPERTIES LINKER_LANGUAGE CXX)
 set_property(TARGET peco PROPERTY CXX_STANDARD 14)
 
@@ -64,6 +53,10 @@ target_compile_options(peco PRIVATE
 
 if (NOT ${PECO_HOST_WINDOWS})
   set_target_properties(peco PROPERTIES LINK_FLAGS "${PECO_LINK_FLAGS}")
+else()
+  if (${INCLUDE_MODULE_NET})
+    target_link_libraries(peco PUBLIC "Ws2_32.lib")
+  endif()
 endif()
 
 set(_dir_output_ ${CMAKE_BINARY_DIR}/Output)

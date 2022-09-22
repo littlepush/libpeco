@@ -41,7 +41,7 @@ namespace peco {
 
 template <typename _TyIncomingAdapter, typename _TyOutgoingAdapter>
 void dup(std::shared_ptr<_TyIncomingAdapter> i, std::shared_ptr<_TyOutgoingAdapter> o) {
-  auto i2o = loop::current.run([=]() {
+  auto i2o = current_loop::run([=]() {
     while(true) {
       auto d = i->read();
       if (d.status == kNetOpStatusFailed) {
@@ -53,7 +53,7 @@ void dup(std::shared_ptr<_TyIncomingAdapter> i, std::shared_ptr<_TyOutgoingAdapt
       o->write(d.data);
     }
   });
-  auto o2i = loop::current.run([=](){
+  auto o2i = current_loop::run([=](){
     while(true) {
       auto d = o->read();
       if (d.status == kNetOpStatusFailed) {

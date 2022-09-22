@@ -103,14 +103,14 @@ public:
   static void bind_writer(log_writer_t writer);
 
 public:
-  static log_obj debug;
-  static log_obj info;
-  static log_obj notice;
-  static log_obj warning;
-  static log_obj error;
-  static log_obj critical;
-  static log_obj alert;
-  static log_obj emergancy;
+  static PECO_VISIABLE log_obj debug;
+  static PECO_VISIABLE log_obj info;
+  static PECO_VISIABLE log_obj notice;
+  static PECO_VISIABLE log_obj warning;
+  static PECO_VISIABLE log_obj error;
+  static PECO_VISIABLE log_obj critical;
+  static PECO_VISIABLE log_obj alert;
+  static PECO_VISIABLE log_obj emergancy;
 };
 
 } // namespace peco

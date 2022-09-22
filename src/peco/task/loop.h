@@ -74,7 +74,7 @@ public:
   /**
    * @brief Get current thread's shared loop object
   */
-  static thread_local loop current;
+  static loop& current();
 
 public:
   /**

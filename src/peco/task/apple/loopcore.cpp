@@ -93,7 +93,7 @@ void loopcore::wait(duration_t duration) {
   }
 }
 
-/**s
+/**
  * @brief Break the waiting
  */
 void loopcore::stop() {
