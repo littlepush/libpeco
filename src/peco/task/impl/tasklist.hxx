@@ -82,7 +82,7 @@ public:
     /**
      * @brief The cached fd
     */
-    long          fd;
+    fd_t          fd;
     /**
      * @brief One of the event type to monitor
     */
@@ -91,7 +91,7 @@ public:
     /**
      * @brief Easy Cstor
     */
-    cache_fd_t(long fd, EventType etype);
+    cache_fd_t(fd_t fd, EventType etype);
 
     /**
      * @brief Operator to make this type can be map's key type
@@ -134,7 +134,7 @@ public:
    * @brief Sort & Insert a task into the list
   */
   void insert(basic_task_ptr_t t, worker_t timedout_handler, 
-    long fd = -1l, EventType event_type = kEventTypeRead);
+    fd_t fd = -1l, EventType event_type = kEventTypeRead);
 
   /**
    * @brief Replace a given task's next_fire_time to the fire_time
@@ -144,12 +144,12 @@ public:
   /**
    * @brief Remove a task from the list
   */
-  void erase(basic_task_ptr_t t, long fd = -1l, EventType event_type = kEventTypeRead);
+  void erase(basic_task_ptr_t t, fd_t fd = -1l, EventType event_type = kEventTypeRead);
 
   /**
    * @brief Erase all fd related item
   */
-  void erase(long fd);
+  void erase(fd_t fd);
 
   /**
    * @brief Get the task count
@@ -164,12 +164,12 @@ public:
   /**
    * @brief Search task with the related fd
   */
-  std::list<task_id_t> search(long fd, EventType event_type);
+  std::list<task_id_t> search(fd_t fd, EventType event_type);
 
   /**
    * @brief Search all event's task
   */
-  std::list<task_id_t> search_all(long fd);
+  std::list<task_id_t> search_all(fd_t fd);
 
 protected:
   std::map<cache_item_t, worker_t>   ordered_time_map_;

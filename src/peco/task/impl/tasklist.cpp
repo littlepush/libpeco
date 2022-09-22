@@ -59,7 +59,7 @@ bool tasklist::cache_item_t::operator != (const tasklist::cache_item_t& r) const
 /**
  * @brief Easy Cstor
  */
-tasklist::cache_fd_t::cache_fd_t(long fd, EventType etype) 
+tasklist::cache_fd_t::cache_fd_t(fd_t fd, EventType etype) 
   : fd(fd), event_type(etype) { }
 
 /**
@@ -102,7 +102,7 @@ tasklist::result_type tasklist::fetch() {
  * @brief Sort & Insert a task into the list
 */
 void tasklist::insert(tasklist::basic_task_ptr_t t, worker_t timedout_handler,
-                      long fd, EventType event_type) {
+                      fd_t fd, EventType event_type) {
   if (t == nullptr) return;
   ordered_time_map_[tasklist::cache_item_t(t)] = timedout_handler;
   if (fd != -1l) {
@@ -129,7 +129,7 @@ void tasklist::replace_time(tasklist::basic_task_ptr_t t, task_time_t fire_time)
 /**
  * @brief Remove a task from the list
 */
-void tasklist::erase(basic_task_ptr_t t, long fd, EventType event_type) {
+void tasklist::erase(basic_task_ptr_t t, fd_t fd, EventType event_type) {
   if (t == nullptr) return;
   tasklist::cache_item_t cache_key(t);
   ordered_time_map_.erase(cache_key);
@@ -148,7 +148,7 @@ void tasklist::erase(basic_task_ptr_t t, long fd, EventType event_type) {
 /**
  * @brief Erase all fd related item
 */
-void tasklist::erase(long fd) {
+void tasklist::erase(fd_t fd) {
   const static EventType kEventTypePool[] = {kEventTypeRead, kEventTypeWrite};
   if (fd == -1l) return;
   for (size_t i = 0; i < 2u; ++i) {
@@ -181,7 +181,7 @@ bool tasklist::has(basic_task_ptr_t t) const {
 /**
  * @brief Search task with the related fd
 */
-std::list<task_id_t> tasklist::search(long fd, EventType event_type) {
+std::list<task_id_t> tasklist::search(fd_t fd, EventType event_type) {
   std::list<task_id_t> result;
   auto fd_range = fd_cache_map_.equal_range(cache_fd_t(fd, event_type));
   for (auto fd_it = fd_range.first; fd_it != fd_range.second; ++fd_it) {
@@ -195,7 +195,7 @@ std::list<task_id_t> tasklist::search(long fd, EventType event_type) {
 /**
  * @brief Search all event's task
 */
-std::list<task_id_t> tasklist::search_all(long fd) {
+std::list<task_id_t> tasklist::search_all(fd_t fd) {
   auto read_result = this->search(fd, kEventTypeRead);
   auto write_result = this->search(fd, kEventTypeWrite);
   read_result.splice(read_result.end(), write_result);

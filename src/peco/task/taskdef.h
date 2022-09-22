@@ -50,6 +50,12 @@ enum {
   kInvalidateTaskId   = -1ll
 };
 
+#if PECO_TARGET_WIN
+typedef long long           fd_t;
+#else
+typedef long                fd_t;
+#endif
+
 /**
  * @brief time stamp
 */

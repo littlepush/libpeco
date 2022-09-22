@@ -35,6 +35,8 @@ SOFTWARE.
 #if !PECO_TARGET_WIN
 #include <fcntl.h>
 #include <sys/un.h>
+#else
+#include <afunix.h>
 #endif
 
 namespace peco {
@@ -117,17 +119,22 @@ bool path_bind::operator()(SOCKET_T fd) {
   }
 
   struct sockaddr_un  addr;
-  bzero(&addr, sizeof(addr));
-  strcpy(addr.sun_path, bind_path_.c_str());
+  memset(&addr, 0, sizeof(addr));
+  memcpy(addr.sun_path, bind_path_.c_str(), bind_path_.size());
 
   addr.sun_family = AF_UNIX;
 #if PECO_TARGET_APPLE
-  int addrlen = bind_path_.size() + sizeof(addr.sun_family) + sizeof(addr.sun_len);
+  int addrlen = static_cast<int>(bind_path_.size() + sizeof(addr.sun_family) + sizeof(addr.sun_len));
   addr.sun_len = sizeof(addr);
 #else
-  int addrlen = bind_path_.size() + sizeof(addr.sun_family);
+  int addrlen = static_cast<int>(bind_path_.size() + sizeof(addr.sun_family));
 #endif
+
+#if PECO_TARGET_WIN
+  _unlink(bind_path_.c_str());
+#else
   unlink(bind_path_.c_str());
+#endif
 
   if ( ::bind(fd, (struct sockaddr*)&addr, addrlen) < 0 ) {
     log::error << "Failed to bind uds socket on: " << bind_path_

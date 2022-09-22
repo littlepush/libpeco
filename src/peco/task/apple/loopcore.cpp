@@ -77,7 +77,7 @@ void loopcore::wait(duration_t duration) {
 
   for (int i = 0; i < count; ++i) {
     core_event_t* process_event = reinterpret_cast<core_event_t*>(core_vars_) + i;
-    long fd = process_event->ident;
+    fd_t fd = process_event->ident;
 
     auto flags = process_event->flags;
     if ((flags & EV_EOF) || (flags & EV_ERROR)) {
@@ -111,12 +111,12 @@ void loopcore::stop() {
 /**
  * @brief Process the reading event
  */
-bool loopcore::add_read_event(long fd) {
+bool loopcore::add_read_event(fd_t fd) {
   core_event_t e;
   EV_SET(&e, fd, EVFILT_READ, EV_ADD | EV_ONESHOT, 0, 0, NULL);
   return (-1 != kevent(core_fd_, &e, 1, NULL, 0, NULL));
 }
-void loopcore::del_read_event(long fd) {
+void loopcore::del_read_event(fd_t fd) {
   core_event_t e;
   EV_SET(&e, fd, EVFILT_READ, EV_DELETE | EV_ONESHOT, 0, 0, NULL);
   ignore_result(kevent(core_fd_, &e, 1, NULL, 0, NULL));
@@ -125,12 +125,12 @@ void loopcore::del_read_event(long fd) {
 /**
  * @brief Process the writing event
  */
-bool loopcore::add_write_event(long fd) {
+bool loopcore::add_write_event(fd_t fd) {
   core_event_t e;
   EV_SET(&e, fd, EVFILT_WRITE, EV_ADD | EV_ONESHOT, 0, 0, NULL);
   return (-1 != kevent(core_fd_, &e, 1, NULL, 0, NULL));
 }
-void loopcore::del_write_event(long fd) {
+void loopcore::del_write_event(fd_t fd) {
   core_event_t e;
   EV_SET(&e, fd, EVFILT_WRITE, EV_DELETE | EV_ONESHOT, 0, 0, NULL);
   ignore_result(kevent(core_fd_, &e, 1, NULL, 0, NULL));

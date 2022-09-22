@@ -309,7 +309,7 @@ void basic_task::set_flag(uint64_t flag, size_t index) {
  * @brief Get flag at given index, if index is greater than 16, return -1
 */
 uint64_t basic_task::get_flag(size_t index) {
-  if (index >= basic_task::kMaxFlagCount) return (uint64_t)-1llu;
+  if (index >= basic_task::kMaxFlagCount) return (uint64_t)(0llu - 1llu);
   return extra_->flags[index];
 }
 

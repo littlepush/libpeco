@@ -51,7 +51,7 @@ typedef struct epoll_event  core_event_t;
 
 namespace peco {
 
-typedef std::map<long, uint8_t> cached_fd_event_t;
+typedef std::map<fd_t, uint8_t> cached_fd_event_t;
 
 #define EPOLL_FD_NO_EVENT       (uint8_t)0
 #define EPOLL_FD_READ_EVENT     (uint8_t)0x01
@@ -115,7 +115,7 @@ void loopcore::wait(duration_t duration) {
 
   for (int i = 0; i < count; ++i) {
     core_event_t* process_event = reinterpret_cast<core_event_t*>(core_vars_) + i;
-    long fd = process_event->data.fd;
+    fd_t fd = process_event->data.fd;
 
     // Check if is on error
     auto c_it = p_cache->find(fd);
@@ -182,7 +182,7 @@ void loopcore::stop() {
 /**
  * @brief Process the reading event
  */
-bool loopcore::add_read_event(long fd) {
+bool loopcore::add_read_event(fd_t fd) {
   cached_fd_event_t* p_cache = any_cast<cached_fd_event_t>(&core_data_);
   auto c_it = p_cache->find(fd);
   // Already monite on read event
@@ -196,7 +196,7 @@ bool loopcore::add_read_event(long fd) {
   c_it->second = __MARK_READ__(c_it->second);
   return (__core_event_ctl__(core_fd_, fd, event, EPOLL_CTL_ADD) > 0);
 }
-void loopcore::del_read_event(long fd) {
+void loopcore::del_read_event(fd_t fd) {
   cached_fd_event_t* p_cache = any_cast<cached_fd_event_t>(&core_data_);
   auto c_it = p_cache->find(fd);
   // not monited
@@ -211,7 +211,7 @@ void loopcore::del_read_event(long fd) {
 /**
  * @brief Process the writing event
  */
-bool loopcore::add_write_event(long fd) {
+bool loopcore::add_write_event(fd_t fd) {
   cached_fd_event_t* p_cache = any_cast<cached_fd_event_t>(&core_data_);
   auto c_it = p_cache->find(fd);
   // Already monite on write event
@@ -225,7 +225,7 @@ bool loopcore::add_write_event(long fd) {
   c_it->second = __MARK_WRITE__(c_it->second);
   return (__core_event_ctl__(core_fd_, fd, event, EPOLL_CTL_ADD) > 0);
 }
-void loopcore::del_write_event(long fd) {
+void loopcore::del_write_event(fd_t fd) {
   cached_fd_event_t* p_cache = any_cast<cached_fd_event_t>(&core_data_);
   auto c_it = p_cache->find(fd);
   // not monited

@@ -248,7 +248,7 @@ void task::yield() {
 /**
  * @brief wait event on specified fd's event
 */
-void task::wait_fd_for_event(long fd, EventType e, duration_t timedout) {
+void task::wait_fd_for_event(fd_t fd, EventType e, duration_t timedout) {
   auto rt = basic_task::fetch(tid_);
   if (rt == nullptr) return;
   if (e == kEventTypeRead) {

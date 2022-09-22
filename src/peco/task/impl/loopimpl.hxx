@@ -104,13 +104,13 @@ public:
    * @brief Monitor the fd for reading event and put the task into
    * timed list with a timedout handler
   */
-  void wait_for_reading(long fd, std::shared_ptr<basic_task> ptrt, duration_t timedout);
+  void wait_for_reading(fd_t fd, std::shared_ptr<basic_task> ptrt, duration_t timedout);
 
   /**
    * @brief Monitor the fd for writing buffer and put the task into
    * timed list with a timedout handler
   */
-  void wait_for_writing(long fd, std::shared_ptr<basic_task> ptrt, duration_t timedout);
+  void wait_for_writing(fd_t fd, std::shared_ptr<basic_task> ptrt, duration_t timedout);
 
   /**
    * @brief Cancel a repeatable or delay task

@@ -42,8 +42,8 @@ namespace peco {
 
 class loopcore {
 public:
-  typedef std::function<void(long)> core_error_handler_t;
-  typedef std::function<void(long, EventType)> core_event_handler_t; 
+  typedef std::function<void(fd_t)> core_error_handler_t;
+  typedef std::function<void(fd_t, EventType)> core_event_handler_t; 
 
 public :
   /**
@@ -64,14 +64,14 @@ public :
   /**
    * @brief Process the reading event
   */
-  bool add_read_event(long fd);
-  void del_read_event(long fd);
+  bool add_read_event(fd_t fd);
+  void del_read_event(fd_t fd);
 
   /**
    * @brief Process the writing event
   */
-  bool add_write_event(long fd);
-  void del_write_event(long fd);
+  bool add_write_event(fd_t fd);
+  void del_write_event(fd_t fd);
 
   /**
    * @brief Get all time cost on waiting

@@ -59,7 +59,7 @@ bool loopimpl::is_running() const {
 void loopimpl::main() {
   // Invoke base init(which is platform-related)
   this->init(
-    [=](long fd) {
+    [=](fd_t fd) {
       auto id_list = this->timed_list_.search_all(fd);
       // erase task related with this fd
       this->timed_list_.erase(fd);
@@ -73,7 +73,7 @@ void loopimpl::main() {
         }
       }
     },
-    [=](long fd, EventType event_type) {
+    [=](fd_t fd, EventType event_type) {
       auto id_list = this->timed_list_.search(fd, event_type);
       for (const auto& tid: id_list) {
         auto ptrt = basic_task::fetch(tid);
@@ -236,7 +236,7 @@ void loopimpl::wakeup_task(std::shared_ptr<basic_task> ptrt, WaitingSignal signa
  * @brief Monitor the fd for reading event and put the task into
  * timed list with a timedout handler
 */
-void loopimpl::wait_for_reading(long fd, std::shared_ptr<basic_task> ptrt, duration_t timedout) {
+void loopimpl::wait_for_reading(fd_t fd, std::shared_ptr<basic_task> ptrt, duration_t timedout) {
   if (ptrt == nullptr) return;
 
   // if the task has already been marked as canceled,
@@ -263,7 +263,7 @@ void loopimpl::wait_for_reading(long fd, std::shared_ptr<basic_task> ptrt, durat
  * @brief Monitor the fd for writing buffer and put the task into
  * timed list with a timedout handler
 */
-void loopimpl::wait_for_writing(long fd, std::shared_ptr<basic_task> ptrt, duration_t timedout) {
+void loopimpl::wait_for_writing(fd_t fd, std::shared_ptr<basic_task> ptrt, duration_t timedout) {
   if (ptrt == nullptr) return;
   // if the task has already been marked as canceled,
   // just return, not allowed to be holded.

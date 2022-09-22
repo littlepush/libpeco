@@ -54,6 +54,7 @@ namespace peco {
 typedef long                core_event_t;
 #endif
 
+
 /**
  * @brief Stack Type
 */

@@ -36,6 +36,8 @@ SOFTWARE.
 #if !PECO_TARGET_WIN
 #include <fcntl.h>
 #include <sys/un.h>
+#else
+#include <afunix.h>
 #endif
 
 namespace peco {
@@ -170,14 +172,14 @@ bool uds_connect::operator()(SOCKET_T fd) {
   if (dest_addr_.size() == 0) return false;
 
   struct sockaddr_un  peeraddr;
-  bzero(&peeraddr, sizeof(peeraddr));
-  strcpy(peeraddr.sun_path, dest_addr_.c_str());
+  memset(&peeraddr, 0, sizeof(peeraddr));
+  memcpy(peeraddr.sun_path, dest_addr_.c_str(), dest_addr_.size());
   peeraddr.sun_family = AF_UNIX;
 #if PECO_TARGET_APPLE
-  int addrlen = dest_addr_.size() + sizeof(peeraddr.sun_family) + sizeof(peeraddr.sun_len);
+  int addrlen = static_cast<int>(dest_addr_.size() + sizeof(peeraddr.sun_family) + sizeof(peeraddr.sun_len));
   peeraddr.sun_len = sizeof(peeraddr);
 #else
-  int addrlen = dest_addr_.size() + sizeof(peeraddr.sun_family);
+  int addrlen = static_cast<int>(dest_addr_.size() + sizeof(peeraddr.sun_family));
 #endif
 
   if ( -1 == ::connect(fd, (struct sockaddr *)&peeraddr, addrlen) ) {

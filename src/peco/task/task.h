@@ -170,7 +170,7 @@ public:
   /**
    * @brief wait event on specified fd's event
   */
-  void wait_fd_for_event(long fd, EventType e, duration_t timedout);
+  void wait_fd_for_event(fd_t fd, EventType e, duration_t timedout);
 
   /**
    * @brief sleep current task then auto wakeup

@@ -38,12 +38,16 @@ SOFTWARE.
 #include <libkern/OSByteOrder.h>
 #include <machine/endian.h>
 #else
-// Windows?
+#include <afunix.h>
 #endif
 
 #if !PECO_TARGET_WIN
 #include <fcntl.h>
 #include <sys/un.h>
+typedef int       linger_prop_t;
+#else
+#define AF_LOCAL  AF_UNIX
+typedef u_short   linger_prop_t;
 #endif
 
 namespace peco {
@@ -283,8 +287,8 @@ SocketType socktype(SOCKET_T hSo) {
 bool lingertime(SOCKET_T hSo, bool onoff, unsigned timeout) {
   if (SOCKET_NOT_VALIDATE(hSo))
     return false;
-  struct linger _sol = {(onoff ? 1 : 0), (int)timeout};
-  return (setsockopt(hSo, SOL_SOCKET, SO_LINGER, &_sol, sizeof(_sol)) == 0);
+  struct linger _sol = {(linger_prop_t)(onoff ? 1 : 0), (linger_prop_t)timeout};
+  return (setsockopt(hSo, SOL_SOCKET, SO_LINGER, (const char *)&_sol, sizeof(_sol)) == 0);
 }
 
 // Set Current socket reusable or not
@@ -322,6 +326,9 @@ bool __setINetNonblocking(SOCKET_T hSo, bool nonblocking) {
 }
 
 bool __setUDSNonblocking(SOCKET_T hSo, bool nonblocking) {
+#if PECO_TARGET_WIN
+  return __setINetNonblocking(hSo, nonblocking);
+#else
   // Set NonBlocking
   int _f = fcntl(hSo, F_GETFL, NULL);
   if (_f < 0) {
@@ -340,6 +347,7 @@ bool __setUDSNonblocking(SOCKET_T hSo, bool nonblocking) {
     return false;
   }
   return true;
+#endif
 }
 
 // Make a socket to be nonblocking
@@ -394,7 +402,11 @@ bool has_data_pending(SOCKET_T hSo) {
   do {
     FD_ZERO(&_fs);
     FD_SET(hSo, &_fs);
+#if PECO_TARGET_WIN
+    _ret = ::select(0, &_fs, NULL, NULL, &_tv);
+#else
     _ret = ::select(hSo + 1, &_fs, NULL, NULL, &_tv);
+#endif
   } while (_ret < 0 && errno == EINTR);
   // Try to peek
   if (_ret <= 0) return false;
@@ -414,7 +426,11 @@ bool has_buffer_outgoing(SOCKET_T hSo) {
   do {
     FD_ZERO(&_fs);
     FD_SET(hSo, &_fs);
+#if PECO_TARGET_WIN
+    _ret = ::select(0, NULL, &_fs, NULL, &_tv);
+#else
     _ret = ::select(hSo + 1, NULL, &_fs, NULL, &_tv);
+#endif
   } while (_ret < 0 && errno == EINTR);
   return (_ret > 0);
 }
