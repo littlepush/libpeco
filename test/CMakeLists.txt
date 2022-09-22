@@ -34,6 +34,22 @@ function(add_test_target file_name)
   if (NOT ${PECO_HOST_WINDOWS})
     set_target_properties(${target_name} PROPERTIES LINK_FLAGS "${PECO_LINK_FLAGS}")
   endif()
+
+  set(_dir_output_ ${CMAKE_BINARY_DIR}/Output)
+  set(_dir_debug_ ${CMAKE_BINARY_DIR}/Debug)
+  set(_dir_release_ ${CMAKE_BINARY_DIR}/Release)
+  
+  set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${_dir_output_})
+  set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${_dir_release_})
+  set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${_dir_debug_})
+  
+  set_target_properties(${target_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${_dir_output_})
+  set_target_properties(${target_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_RELEASE ${_dir_release_})
+  set_target_properties(${target_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_DEBUG ${_dir_debug_})
+  
+  set_target_properties(${target_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${_dir_output_})
+  set_target_properties(${target_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${_dir_release_})
+  set_target_properties(${target_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${_dir_debug_})
 endfunction()
 
 # Add all test files
