@@ -178,7 +178,7 @@ void set_ips(dns_packet *pkt, const std::list<ip_t> &ips) {
     _amap->rdata = (uint32_t)ip;
     _pbuf += sizeof(dns_arecord_map);
   }
-  pkt->length += (ips.size() * sizeof(dns_arecord_map));
+  pkt->length += static_cast<uint16_t>(ips.size() * sizeof(dns_arecord_map));
 }
 std::list<dns_a_record> ips(dns_packet *pkt) {
   // Try to check the domain size
@@ -236,11 +236,11 @@ void set_cname(dns_packet *pkt, const std::string &cname) {
   _bmap->qtype = htons((uint16_t)dns_qtype_cname);
   _bmap->qclass = htons((uint16_t)dns_qclass_in);
   _bmap->ttl = htonl(30 * 60); // 30 mins
-  _bmap->rlen = htons(cname.size() + 2);
+  _bmap->rlen = htons(static_cast<uint16_t>(cname.size()) + 2);
   // _bmap->rdata = (uint32_t)ip;
   char *_rdata = (char *)(_bmap + 1);
   __set_domain(_rdata, cname);
-  pkt->length += (sizeof(dns_record_map_basic) + cname.size() + 2);
+  pkt->length += static_cast<uint16_t>(sizeof(dns_record_map_basic) + cname.size() + 2);
 }
 dns_cname_record cname(dns_packet *pkt) {
   // Try to check the domain size
@@ -283,7 +283,7 @@ void set_domain(dns_packet *pkt, const std::string &domain) {
 
   // Copy the domain
   __set_domain(pkt_begin(pkt) + pkt->length, domain);
-  pkt->length += (domain.size() + 2);
+  pkt->length += static_cast<uint16_t>(domain.size() + 2);
   pkt->dsize = (uint16_t)(domain.size() + 2);
 }
 std::string domain(dns_packet *pkt) {
@@ -405,7 +405,7 @@ std::list<dns_a_record> resolv_by_udp(const peer_t& dns_server, const std::strin
   auto r = uc->read();
   dns_packet rpkt;
   rpkt.packet = &r.data[0];
-  rpkt.length = r.data.size();
+  rpkt.length = static_cast<uint16_t>(r.data.size());
   rpkt.buflen = 0;
   rpkt.header = (dns_packet_header *)rpkt.packet;
   rpkt.dsize = 0;
@@ -434,7 +434,7 @@ std::list<dns_a_record> resolv_by_tcp(const peer_t& dns_server, const std::strin
   auto r = tc->read();
   dns_packet rpkt;
   rpkt.packet = &r.data[0];
-  rpkt.length = r.data.size();
+  rpkt.length = static_cast<uint16_t>(r.data.size());
   rpkt.buflen = 0;
   rpkt.header = (dns_packet_header *)(rpkt.packet + sizeof(uint16_t));
   rpkt.dsize = 0;

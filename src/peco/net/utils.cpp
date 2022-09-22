@@ -466,7 +466,7 @@ SOCKET_T create_socket(SocketType sock_type) {
 
 // Read Data From a socket
 size_t read(SOCKET_T hSo, char *buffer, size_t length,
-            std::function<int(SOCKET_T, char *, size_t)> f) {
+            std::function<int(SOCKET_T, char *, socket_data_len_t)> f) {
   if (SOCKET_NOT_VALIDATE(hSo))
     return 0;
   size_t BUF_SIZE = length;
@@ -474,7 +474,7 @@ size_t read(SOCKET_T hSo, char *buffer, size_t length,
   size_t _leftspace = BUF_SIZE;
 
   do {
-    int _retCode = f(hSo, buffer + _received, _leftspace);
+    int _retCode = f(hSo, buffer + _received, static_cast<socket_data_len_t>(_leftspace));
     if (_retCode < 0) {
       if (errno == EINTR)
         continue; // Signal 7, retry
@@ -495,8 +495,8 @@ size_t read(SOCKET_T hSo, char *buffer, size_t length,
   return _received;
 }
 bool read(std::string& buffer, 
-  SOCKET_T hSo, std::function<int(SOCKET_T, char *, size_t)> f,
-                 uint32_t max_buffer_size) {
+  SOCKET_T hSo, std::function<int(SOCKET_T, char *, socket_data_len_t)> f,
+                 size_t max_buffer_size) {
   if (SOCKET_NOT_VALIDATE(hSo))
     return false;
   bool _hasLimit = (max_buffer_size != 0);
@@ -507,7 +507,7 @@ bool read(std::string& buffer,
   size_t _leftspace = BUF_SIZE;
 
   do {
-    int _retCode = f(hSo, &_buffer[0] + _received, _leftspace);
+    int _retCode = f(hSo, &_buffer[0] + _received, static_cast<socket_data_len_t>(_leftspace));
     if (_retCode < 0) {
       if (errno == EINTR)
         continue; // signal 7, retry
@@ -560,10 +560,10 @@ bool read(std::string& buffer,
 }
 // Write Data to a socket
 int write(SOCKET_T hSo, const char *data, size_t data_lenth,
-          std::function<int(SOCKET_T, const char *, size_t)> f) {
+          std::function<int(SOCKET_T, const char *, socket_data_len_t)> f) {
   size_t _sent = 0;
   while (_sent < data_lenth) {
-    int _ret = f(hSo, data + _sent, data_lenth - _sent);
+    int _ret = f(hSo, data + _sent, static_cast<socket_data_len_t>(data_lenth - _sent));
     if (_ret < 0) {
       if (ENOBUFS == errno || EAGAIN == errno || EWOULDBLOCK == errno) {
         // No buf

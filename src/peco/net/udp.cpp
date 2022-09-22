@@ -252,7 +252,7 @@ bool udp_listener::writeto(const peer_t& peer, const char* data, size_t length) 
         std::placeholders::_3, 
         0 | SO_NETWORK_NOSIGNAL,
         (struct sockaddr *)&addr, 
-        sizeof(addr)
+        static_cast<socket_data_len_t>(sizeof(addr))
       )
     );
     if (ret == -1) return false;
@@ -308,7 +308,7 @@ bool udp_packet::write(const char* data, size_t length) {
         std::placeholders::_3, 
         0 | SO_NETWORK_NOSIGNAL,
         (struct sockaddr *)&addr, 
-        sizeof(addr)
+        static_cast<socket_data_len_t>(sizeof(addr))
       )
     );
     if (ret == -1) return false;

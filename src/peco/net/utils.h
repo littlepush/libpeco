@@ -41,9 +41,11 @@ namespace peco {
 
 #if PECO_TARGET_WIN
 typedef int socklen_t;
-typedef SOCKET SOCKET_T;
+typedef SOCKET  SOCKET_T;
+typedef int     socket_data_len_t;
 #else
-typedef long SOCKET_T;
+typedef long    SOCKET_T;
+typedef size_t  socket_data_len_t;
 #endif
 
 #ifndef INVALIDATE_SOCKET
@@ -200,12 +202,12 @@ namespace net_utils {
       SOCKET_T hSo,
       char * buffer,
       size_t length,
-      std::function<int (SOCKET_T, char *, size_t)> f);
+      std::function<int (SOCKET_T, char *, socket_data_len_t)> f);
   bool read(
       std::string& buffer,
       SOCKET_T hSo, 
-      std::function<int (SOCKET_T, char *, size_t)> f, 
-      uint32_t max_buffer_size = 0);
+      std::function<int (SOCKET_T, char *, socket_data_len_t)> f, 
+      size_t max_buffer_size = 0);
 
   /**
    * @brief Write Data to a socket
@@ -214,7 +216,7 @@ namespace net_utils {
       SOCKET_T hSo, 
       const char* data, 
       size_t data_lenth,
-      std::function<int (SOCKET_T, const char*, size_t)> f);
+      std::function<int (SOCKET_T, const char*, socket_data_len_t)> f);
 
 } // namespace net_utils
 } // namespace peco

@@ -223,7 +223,7 @@ size_t redis_object::parse_response_(const char *data, size_t length) {
       if (sub_objects_.rbegin()->all_get() == false)
         break;
     } while (sub_objects_.size() != sub_object_count_);
-    content_length_ += _shift;
+    content_length_ += (int)_shift;
   }
   return _shift;
 }
@@ -645,7 +645,7 @@ bool redis_connector::do_query_job_(const redis_command& cmd) {
     sbuf.append(r.data);
 
     const char *resp_body = sbuf.c_str();
-    uint32_t resp_size = sbuf.size();
+    uint32_t resp_size = static_cast<uint32_t>(sbuf.size());
     uint32_t resp_shifted_size = 0;
 
     do {
@@ -689,7 +689,7 @@ bool redis_connector::do_query_job_(const redis_command& cmd) {
           redis_object _ro(resp_body, resp_size - resp_shifted_size, _shift);
           if ( _shift == redis_object::invalidate ) break;
           this->last_result_.emplace_back(_ro);
-          resp_shifted_size += _shift;
+          resp_shifted_size += static_cast<uint32_t>(_shift);
           resp_body += _shift;
           if ( this->last_result_.rbegin()->all_get() == false ) break;
         } while ( (int)this->last_result_.size() != this->last_obj_count_ );

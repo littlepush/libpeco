@@ -173,7 +173,7 @@ bool connector_adapter::write(const char* data, size_t length, duration_t timedo
   size_t sent = 0;
   do {
     // Single Package max size is 4k
-    int single_pkg = std::min((size_t)(length - sent), (size_t)(4 * 1024));
+    size_t single_pkg = std::min((size_t)(length - sent), (size_t)(4 * 1024));
     int _ret = net_utils::write(
       fd_,
       data + sent, single_pkg,
