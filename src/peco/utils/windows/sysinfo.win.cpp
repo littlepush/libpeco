@@ -49,7 +49,7 @@ struct __inner_sys_info {
   uint64_t u_mem = 0;
   uint64_t f_mem = 0;
 
-  std::vector<HCOUNTER> idle_times;
+  HCOUNTER *processor_times = NULL;
   std::vector<float> cpu_loads;
   uint64_t cpu_total_time = 0;
   time_t sys_snap_time = 0;
@@ -82,6 +82,10 @@ struct __inner_sys_info {
     if (counter_list_buffer) {
       free(counter_list_buffer);
       counter_list_buffer = nullptr;
+    }
+    if (processor_times) {
+      delete [] processor_times;
+      processor_times = NULL;
     }
   }
 
@@ -128,24 +132,33 @@ struct __inner_sys_info {
     // is followed by a second null-terminator.
     for (LPTSTR this_instance = instance_list_buffer; *this_instance != 0;
          this_instance += lstrlen(this_instance) + 1) {
-      std::cout << this_instance << std::endl;
       if (0 != _tcscmp(this_instance, TEXT("_Total"))) {
         // it's not the toalizer, so count it
         cc++;
       }
     }
 
+    // Alloc processor time counter storage
+    processor_times = new HCOUNTER[cc];
     pdh_status = PdhOpenQuery(NULL, 1, &query_handler);
-    for (int n = 0; n < cc; ++n) {
-      HCOUNTER idle_counter{};
-      idle_times.emplace_back(idle_counter);
-      cpu_loads.push_back(0.f);
-      TCHAR counter_path[255];
-      _stprintf_s(counter_path, 255, TEXT("\\Processor(%d)\\%% Idle Time"), n);
-      pdh_status =
-        PdhAddCounter(query_handler, counter_path, n, &(*idle_times.rbegin()));
+    if (pdh_status != ERROR_SUCCESS) {
+      _tprintf(TEXT("PdhOpenQuery Failed: 0x%8.8X\n"), pdh_status);
     }
-
+    for (int n = 0; n < cc; ++n) {
+      cpu_loads.push_back(0.f);
+      TCHAR counter_path[255] = {'\0'};
+      _stprintf_s(counter_path, 255, TEXT("\\Processor(%d)\\%% Processor Time"), n);
+      pdh_status =
+        PdhAddCounter(query_handler, counter_path, n, &processor_times[n]);
+      _tprintf(TEXT("add counter: \"%s\"\n"), counter_path);
+      if (pdh_status != ERROR_SUCCESS) {
+        _tprintf(TEXT("Couldn't add counter \"%s\": 0x%8.8X\n"), counter_path, pdh_status);
+      }
+    }
+    pdh_status = PdhCollectQueryDataEx(query_handler, 2, load_event);
+    if (pdh_status != ERROR_SUCCESS) {
+      _tprintf(TEXT("PdhCollectQueryDataEx Failed: 0x%8.8X\n"), pdh_status);
+    }
     this->update();
   }
 
@@ -194,7 +207,7 @@ struct __inner_sys_info {
     _mem_stat.dwLength = sizeof(_mem_stat);
     ::GlobalMemoryStatusEx(&_mem_stat);
     t_mem = _mem_stat.ullTotalPhys;
-    u_mem = (uint64_t)(_mem_stat.dwMemoryLoad * t_mem);
+    u_mem = (uint64_t)(_mem_stat.dwMemoryLoad * t_mem / 100);
     f_mem = _mem_stat.ullAvailPhys;
 
     // Get App CPU Usage
@@ -213,14 +226,17 @@ struct __inner_sys_info {
     }
 
     if (query_handler != NULL && load_event != NULL) {
-      PdhCollectQueryDataEx(query_handler, 2, load_event);
       DWORD counter_type = 0;
       for (size_t n = 0; n < cc; ++n) {
-        PDH_FMT_COUNTERVALUE v_idle;
-        PdhGetFormattedCounterValue(idle_times[n], PDH_FMT_DOUBLE,
-                                    &counter_type, &v_idle);
-        std::cout << v_idle.longValue << std::endl;
-        cpu_loads[n] = 1.f - (float)v_idle.doubleValue;
+        PDH_FMT_COUNTERVALUE v_proc;
+        auto status = PdhGetFormattedCounterValue(
+            processor_times[n], PDH_FMT_DOUBLE,
+            &counter_type, &v_proc);
+        if (status != ERROR_SUCCESS) {
+          continue;
+          // _tprintf(TEXT("0: Error 0x%8.8X\n"), status);
+        }
+        cpu_loads[n] = (float)v_proc.doubleValue / 100.f;
       }
     }
   }
@@ -271,3 +287,4 @@ const std::string &process_name() { return g_inner_sys_info().proc_name; }
 
 // Push Chen
 //
+

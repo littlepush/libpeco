@@ -37,6 +37,8 @@ int main(int argc, char *argv[]) {
   peco::log::info << "CPU Count: " << peco::cpu_count() << std::endl;
   peco::log::info << "Total Memory: " << peco::total_memory() << "B" << std::endl;
   peco::log::info << "Monitor For 10 Seconds: " << std::endl;
+  // In Windows, it will need about 3-4 seconds to load data from system
+  // so the data of the beginning should always be 0%
   for (size_t i = 0; i < 10; ++i) {
     peco::log::info << "-#" << (i + 1) << ": " << std::endl;
     peco::log::info << " Memory Usage: " << peco::memory_usage() << "B" << std::endl;
