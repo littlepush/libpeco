@@ -78,8 +78,14 @@ typedef std::function< void(void) >               worker_t;
 #endif
 
 #ifndef STACK_RESERVED_SIZE
+#if PECO_TARGET_APPLE
+// We will reserve at least 16KB data in the front of the stack when 
+// try to build apple version
+#define STACK_RESERVED_SIZE 16384     // 16KB
+#else
 // We will reserve at least 8KB data in the front of the stack
 #define STACK_RESERVED_SIZE 8192     // 8KB
+#endif
 #endif
 
 /**
