@@ -50,22 +50,25 @@ public:
   /**
    * @brief Fetch a freed stack buffer
   */
-  static task_buffer_ptr fetch();
+  task_buffer_ptr fetch();
 
   /**
    * @brief Release the stack buffer
   */
-  static void release(task_buffer_ptr buffer);
+  void release(task_buffer_ptr buffer);
 
   /**
    * @brief Set the max free buffer count;
   */
-  static void set_cache_count(size_t cache_count);
+  void set_cache_count(size_t cache_count);
 
   /**
    * @brief Get current cached buffer count
   */
-  static size_t free_count();
+  size_t free_count();
+protected:
+  size_t max_count_ = 32;
+  std::list<task_buffer_ptr> cache_list_;
 };
 
 } // namespace peco

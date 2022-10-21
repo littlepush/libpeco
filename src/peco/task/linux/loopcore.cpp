@@ -80,6 +80,10 @@ inline int __core_event_ctl__(int core_fd, int so, uint32_t flag, int eid) {
   }
 }
 
+loopcore::~loopcore() {
+  this->stop();
+}
+
 /**
  * @brief Init the core fd(if any) and bind the error and event handler
  */

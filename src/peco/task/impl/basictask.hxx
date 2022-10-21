@@ -44,19 +44,12 @@ public:
   enum {
     kMaxFlagCount = 16
   };
-private:
+public:
   /**
    * @brief Create a task with worker
   */
   basic_task(
-    worker_t worker, repeat_count_t repeat_count = REPEAT_COUNT_ONESHOT, 
-    duration_t interval = PECO_TIME_MS(0));
-
-public:
-  /**
-   * @brief force to create a shared ptr task
-  */
-  static std::shared_ptr<basic_task> create_task(
+    stack_cache::task_buffer_ptr pbuf, task_id_t running_task,
     worker_t worker, repeat_count_t repeat_count = REPEAT_COUNT_ONESHOT, 
     duration_t interval = PECO_TIME_MS(0));
 
@@ -65,11 +58,6 @@ public:
    * @brief Release the task, and invoke `atexit`
   */
   ~basic_task();
-
-  /**
-   * @brief Destroy this task, will remove from global cache
-  */
-  void destroy_task();
 
   /**
    * @brief Get the task id
@@ -136,7 +124,7 @@ public:
    * @brief Reset the task's status and ready for another loop
    * Only use this method in repeatable task
   */
-  void reset_task();
+  void reset_task(stack_context_t* main_ctx);
 
   /**
    * @brief Get the internal task pointer
@@ -151,32 +139,8 @@ public:
   /**
    * @brief Swap to current task
   */
-  void swap_to_task();
+  void swap_to_task(stack_context_t* main_ctx);
 
-  /**
-   * @brief Swap to main context
-  */
-  static void swap_to_main();
-
-  /**
-   * @brief Get Current running task
-  */
-  static std::shared_ptr<basic_task>& running_task();
-  
-  /**
-   * @brief Fetch the created task by its id
-  */
-  static std::shared_ptr<basic_task> fetch(task_id_t tid);
-
-  /**
-   * @brief Scan all cached task
-  */
-  static void foreach(std::function<void(std::shared_ptr<basic_task>)> handler);
-
-  /**
-   * @brief Get the cache task count
-  */
-  static size_t cache_size();
 protected:
   stack_cache::task_buffer_ptr    buffer_;
   task_context_t*                 task_;

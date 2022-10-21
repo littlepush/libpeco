@@ -39,30 +39,30 @@ namespace peco {
  * @brief Start a new normal task
 */
 task loop::run(worker_t worker, const char* name) {
-  auto inner_task = basic_task::create_task(worker);
+  auto inner_task = impl->create_task(worker);
   inner_task->set_name(name);
   // put the new task into the loop wrapper's timed list
-  loopimpl::shared().add_task(inner_task);
+  impl->add_task(inner_task);
   return task(inner_task->task_id());
 }
 /**
  * @brief Start a loop task
 */
 task loop::run_loop(worker_t worker, duration_t interval, const char* name) {
-  auto inner_task = basic_task::create_task(worker, REPEAT_COUNT_INFINITIVE, interval);
+  auto inner_task = impl->create_task(worker, REPEAT_COUNT_INFINITIVE, interval);
   inner_task->set_name(name);
   // put the new task into the loop wrapper's timed list
-  loopimpl::shared().add_task(inner_task);
+  impl->add_task(inner_task);
   return task(inner_task->task_id());
 }
 /**
  * @brief Start a task after given <delay>
 */
 task loop::run_delay(worker_t worker, duration_t delay, const char* name) {
-  auto inner_task = basic_task::create_task(worker, REPEAT_COUNT_ONESHOT, delay);
+  auto inner_task = impl->create_task(worker, REPEAT_COUNT_ONESHOT, delay);
   inner_task->set_name(name);
   // put the new task into the loop wrapper's timed list
-  loopimpl::shared().add_task(inner_task);
+  impl->add_task(inner_task);
   return task(inner_task->task_id());
 }
 
@@ -71,15 +71,15 @@ task loop::run_delay(worker_t worker, duration_t delay, const char* name) {
 */
 int loop::main() {
   // invoke loop wrapper's main
-  loopimpl::shared().main();
+  impl->main();
   // return the loop wrapper's exit code
-  return loopimpl::shared().exit_code();
+  return impl->exit_code();
 }
 /**
  * @brief Get current loop's load average
 */
 double loop::load_average() const {
-  return loopimpl::shared().load_average();
+  return impl->load_average();
 }
 
 /**
@@ -87,7 +87,7 @@ double loop::load_average() const {
 */
 void loop::exit(int code) {
   // tell the loop wrapper to break main loop with given code
-  loopimpl::shared().exit(code);
+  impl->exit(code);
 }
 
 /**
@@ -103,6 +103,7 @@ loop& loop::current() {
 */
 loop::~loop() {
   // default d'stor
+  delete impl;
 }
 
 /**
@@ -110,6 +111,7 @@ loop::~loop() {
 */
 loop::loop() {
   // initialize the thread localed loop wrapper
+  impl = new loopimpl();
 }
 
 

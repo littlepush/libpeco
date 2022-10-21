@@ -38,21 +38,17 @@ SOFTWARE.
 #include "peco/task/impl/taskcontext.hxx"
 #include "peco/task/impl/stackcache.hxx"
 #include "peco/task/impl/tasklist.hxx"
-#include "peco/task/impl/loopcore.hxx"
+#include "peco/task/impl/loopcontext.hxx"
 
 namespace peco {
 
-class loopimpl : public loopcore {
+class loopimpl : public loopcontext {
 public:
   /**
    * @brief Default C'str
   */
   loopimpl();
-
-  /**
-   * @brief Singleton loopimpl
-  */
-  static loopimpl& shared();
+  virtual ~loopimpl();
 
   /**
    * @brief Tell if current loop is running

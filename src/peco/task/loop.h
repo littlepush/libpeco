@@ -38,6 +38,11 @@ SOFTWARE.
 
 namespace peco {
 
+/**
+ * @brief pre-define of the impl
+*/
+class loopimpl;
+
 class loop {
 public:
   /**
@@ -87,6 +92,11 @@ protected:
    * @brief Not allow to create loop object
   */
   loop();
+
+  /**
+   * @brief internal impl
+  */
+  loopimpl* impl = nullptr;
 };
 
 /**

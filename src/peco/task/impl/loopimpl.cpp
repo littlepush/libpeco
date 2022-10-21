@@ -40,13 +40,6 @@ loopimpl::loopimpl() {
 
 }
 /**
- * @brief Singleton loopimpl
-*/
-loopimpl& loopimpl::shared() {
-  thread_local static loopimpl s_impl;
-  return s_impl;
-}
-/**
  * @brief Tell if current loop is running
 */
 bool loopimpl::is_running() const {
@@ -64,7 +57,7 @@ void loopimpl::main() {
       // erase task related with this fd
       this->timed_list_.erase(fd);
       for (const auto& tid : id_list) {
-        auto ptrt = basic_task::fetch(tid);
+        auto ptrt = this->find_task(tid);
         if (ptrt) {
           ptrt->get_task()->signal = kWaitingSignalBroken;
           ptrt->get_task()->next_fire_time = TASK_TIME_NOW();
@@ -76,7 +69,7 @@ void loopimpl::main() {
     [=](fd_t fd, EventType event_type) {
       auto id_list = this->timed_list_.search(fd, event_type);
       for (const auto& tid: id_list) {
-        auto ptrt = basic_task::fetch(tid);
+        auto ptrt = this->find_task(tid);
         this->timed_list_.erase(ptrt, fd, event_type);
         if (ptrt) {
           ptrt->get_task()->signal = kWaitingSignalReceived;
@@ -89,29 +82,29 @@ void loopimpl::main() {
 
   running_ = true;
   begin_time_ = TASK_TIME_NOW();
-  while (basic_task::cache_size() > 0) {
+  while (this->alive_task_size() > 0) {
     while (this->timed_list_.size() > 0 && TASK_TIME_NOW() >= this->timed_list_.nearest_time()) {
       auto result = this->timed_list_.fetch();
       if (result.on_time) {
         result.on_time();
       }
-      auto ptrt = basic_task::fetch(result.tid);
+      auto ptrt = this->find_task(result.tid);
       // Switch to the task
-      ptrt->swap_to_task();
+      this->swap_to_task(ptrt);
       if (ptrt->status() == kTaskStatusStopped) {
-        ptrt->destroy_task();
+        this->del_task(ptrt->task_id());
       } else if (ptrt->status() == kTaskStatusPending) {
         this->timed_list_.insert(ptrt, nullptr);
       }
     }
     // after all timed task's executing, if there is no
     // cached task, stop the loop
-    if (basic_task::cache_size() == 0) break;
+    if (this->alive_task_size() == 0) break;
 
     // Someone stop the loop, should cancel all task
     if (!running_) {
       // Mark all task to be cancelled
-      basic_task::foreach([=](std::shared_ptr<basic_task> ptrt) {
+      this->foreach([=](std::shared_ptr<basic_task> ptrt) {
         this->cancel(ptrt);
       });
       continue;
@@ -166,11 +159,11 @@ void loopimpl::add_task(std::shared_ptr<basic_task> ptrt) {
 void loopimpl::yield_task(std::shared_ptr<basic_task> ptrt) {
   if (ptrt == nullptr) return;
   // only running task can be holded
-  assert(ptrt->task_id() == basic_task::running_task()->task_id());
+  assert(ptrt->task_id() == this->running_task_->task_id());
   ptrt->get_task()->next_fire_time = TASK_TIME_NOW();
   ptrt->get_task()->status = kTaskStatusPaused;
   this->timed_list_.insert(ptrt, nullptr);
-  basic_task::swap_to_main();
+  this->swap_to_main();
 }
 
 /**
@@ -179,7 +172,7 @@ void loopimpl::yield_task(std::shared_ptr<basic_task> ptrt) {
 void loopimpl::hold_task(std::shared_ptr<basic_task> ptrt) {
   if (ptrt == nullptr) return;
   // only running task can be holded
-  assert(ptrt->task_id() == basic_task::running_task()->task_id());
+  assert(ptrt->task_id() == this->running_task_->task_id());
   // This task will only remain in basic task's cache,
   // unless someone keep the task_id and wakeup it.
   ptrt->get_task()->signal = kWaitingSignalNothing;
@@ -190,7 +183,7 @@ void loopimpl::hold_task(std::shared_ptr<basic_task> ptrt) {
     return;
   }
   ptrt->get_task()->status = kTaskStatusPaused;
-  basic_task::swap_to_main();
+  this->swap_to_main();
 }
 
 /**
@@ -200,7 +193,7 @@ void loopimpl::hold_task(std::shared_ptr<basic_task> ptrt) {
 void loopimpl::hold_task_for(std::shared_ptr<basic_task> ptrt, duration_t timedout) {
   if (ptrt == nullptr) return;
   // only running task can be holded
-  assert(ptrt->task_id() == basic_task::running_task()->task_id());
+  assert(ptrt->task_id() == this->running_task_->task_id());
   ptrt->get_task()->signal = kWaitingSignalNothing;
   // if the task has already been marked as canceled,
   // just return, not allowed to be holded.
@@ -211,7 +204,7 @@ void loopimpl::hold_task_for(std::shared_ptr<basic_task> ptrt, duration_t timedo
   ptrt->get_task()->next_fire_time = (TASK_TIME_NOW() + timedout);
   ptrt->get_task()->status = kTaskStatusPaused;
   this->timed_list_.insert(ptrt, nullptr);
-  basic_task::swap_to_main();
+  this->swap_to_main();
 }
 
 /**
@@ -221,8 +214,8 @@ void loopimpl::wakeup_task(std::shared_ptr<basic_task> ptrt, WaitingSignal signa
   if (ptrt == nullptr) return;
   // Make the given task validate again
   assert(
-    (!basic_task::running_task()) ||
-    (ptrt->task_id() != basic_task::running_task()->task_id())
+    (!this->running_task_) ||
+    (ptrt->task_id() != this->running_task_->task_id())
   );
   ptrt->get_task()->signal = signal;
   if (this->timed_list_.has(ptrt)) {
@@ -256,7 +249,7 @@ void loopimpl::wait_for_reading(fd_t fd, std::shared_ptr<basic_task> ptrt, durat
     }
   }, fd, kEventTypeRead);
   this->add_read_event(fd);
-  basic_task::swap_to_main();
+  this->swap_to_main();
 }
 
 /**
@@ -282,7 +275,7 @@ void loopimpl::wait_for_writing(fd_t fd, std::shared_ptr<basic_task> ptrt, durat
     }
   }, fd, kEventTypeWrite);
   this->add_write_event(fd);
-  basic_task::swap_to_main();
+  this->swap_to_main();
 }
 
 /**
@@ -295,7 +288,7 @@ void loopimpl::cancel(std::shared_ptr<basic_task> ptrt) {
   if (ptrt->get_task()->cancelled) return;
   ptrt->get_task()->cancelled = true;
   // Cancel self
-  if (basic_task::running_task() == ptrt) {
+  if (this->running_task_ == ptrt) {
     // Means the task is not in the timed_list and not holding
     // we dont need to do anything
     return;

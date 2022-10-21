@@ -43,6 +43,11 @@ typedef struct kevent core_event_t;
 #endif
 
 namespace peco {
+
+loopcore::~loopcore() {
+  this->stop();
+}
+
 /**
  * @brief Init the core fd(if any) and bind the error and event handler
  */

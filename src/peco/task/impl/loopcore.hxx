@@ -45,6 +45,7 @@ public:
   typedef std::function<void(fd_t)> core_error_handler_t;
   typedef std::function<void(fd_t, EventType)> core_event_handler_t; 
 
+  virtual ~loopcore();
 public :
   /**
    * @brief Init the core fd(if any) and bind the error and event handler

@@ -31,23 +31,16 @@ SOFTWARE.
 
 #include "peco/task/impl/basictask.hxx"
 
-#include <unordered_map>
-
 namespace peco {
 
-/**
- * @brief Global Main Context
-*/
-stack_context_t* get_main_context() {
-  thread_local static task_context_t main_task;
-  return &main_task.ctx;
-}
-
-typedef void (*__context_fn_t)(void);
-
 #if PECO_TARGET_APPLE
-void* __context_main__(void * ptask) {
-  task_context_t* raw_task = reinterpret_cast<task_context_t *>(ptask);
+typedef struct __ctx__ {
+  void *ptask;
+  stack_context_t* main_ctx;
+}* ctx_t;
+void* __context_main__(void * p_ctx) {
+  ctx_t c = (ctx_t)p_ctx;
+  task_context_t* raw_task = reinterpret_cast<task_context_t *>(c->ptask);
   if (!setjmp(raw_task->ctx)) {
     // Use pthread exit to keep the stack not been broken.
     pthread_exit(NULL);
@@ -55,31 +48,24 @@ void* __context_main__(void * ptask) {
     assert(0);
   }
   raw_task->worker();
-  longjmp(*get_main_context(), 1);
+  longjmp(*c->main_ctx, 1);
   return (void *)0;
 }
 #else
+typedef void (*__context_fn_t)(void);
 void __context_main__(void * ptask) {
   task_context_t* raw_task = reinterpret_cast<task_context_t *>(ptask);
   raw_task->worker();
 }
 #endif
 
-typedef std::shared_ptr<basic_task> basic_task_ptr_t;
-
-/**
- * @brief Task Cache
-*/
-std::unordered_map<task_id_t, basic_task_ptr_t>& get_task_cache() {
-  thread_local static std::unordered_map<task_id_t, basic_task_ptr_t> g_cache;
-  return g_cache;
-}
-
 /**
  * @brief Create a task with worker
 */
-basic_task::basic_task(worker_t worker, repeat_count_t repeat_count, duration_t interval)
-  : buffer_(stack_cache::fetch()) {
+basic_task::basic_task(
+  stack_cache::task_buffer_ptr pbuf, task_id_t running_task,
+  worker_t worker, repeat_count_t repeat_count, duration_t interval)
+  : buffer_(pbuf) {
   task_ = new (buffer_->buf) task_context_t;
   // Task id is the address of the buffer
   task_->tid = (task_id_t)(&buffer_->buf);
@@ -101,14 +87,7 @@ basic_task::basic_task(worker_t worker, repeat_count_t repeat_count, duration_t 
   extra_->zero1 = 0;
   extra_->name[0] = '\0';
   extra_->arg = nullptr;
-  auto r = basic_task::running_task();
-  if (r) {
-    extra_->parent_tid = r->task_id();
-  } else {
-    extra_->parent_tid = kInvalidateTaskId;
-  }
-
-  this->reset_task();
+  extra_->parent_tid = running_task;
 }
 
 /**
@@ -120,32 +99,13 @@ basic_task::~basic_task() {
     task_->atexit = nullptr;
   }
   task_->worker = nullptr;
-  stack_cache::release(buffer_);
-}
-
-/**
- * @brief force to create a shared ptr task
-*/
-std::shared_ptr<basic_task> basic_task::create_task(
-  worker_t worker, repeat_count_t repeat_count, duration_t interval) {
-
-  auto ptr = std::shared_ptr<basic_task>(new basic_task(worker, repeat_count, interval));
-  get_task_cache()[ptr->task_id()] = ptr;
-  return ptr;
-}
-
-/**
- * @brief Destroy this task, will remove from global cache
-*/
-void basic_task::destroy_task() {
-  get_task_cache().erase(task_->tid);
 }
 
 /**
  * @brief Reset the task's status and ready for another loop
  * Only use this method in repeatable task
 */
-void basic_task::reset_task() {
+void basic_task::reset_task(stack_context_t* main_ctx) {
 #if PECO_TARGET_APPLE
   pthread_t _t;
   // according to the office document, a pthread_attr_t can be
@@ -154,8 +114,10 @@ void basic_task::reset_task() {
   // be destroied immediately.
   pthread_attr_t _attr;
   pthread_attr_init(&_attr);
-  ignore_result(pthread_attr_setstack(&_attr, task_->stack, (TASK_STACK_SIZE - STACK_RESERVED_SIZE)));
-  ignore_result(pthread_create(&_t, &_attr, __context_main__, (void *)buffer_->buf));
+  ignore_result(pthread_attr_setstack(
+      &_attr, task_->stack, (TASK_STACK_SIZE - STACK_RESERVED_SIZE)));
+  __ctx__ c{(void *)buffer_->buf, main_ctx};
+  ignore_result(pthread_create(&_t, &_attr, __context_main__, (void *)&c));
   pthread_join(_t, nullptr);
   pthread_attr_destroy(&_attr);
 #else
@@ -163,7 +125,7 @@ void basic_task::reset_task() {
   task_->ctx.uc_stack.ss_sp = task_->stack;
   task_->ctx.uc_stack.ss_size = TASK_STACK_SIZE - STACK_RESERVED_SIZE;
   task_->ctx.uc_stack.ss_flags = 0;
-  task_->ctx.uc_link = get_main_context();
+  task_->ctx.uc_link = main_ctx;
 
   // save the job on heap
   makecontext(&(task_->ctx), (__context_fn_t)__context_main__, 1, task_);
@@ -174,23 +136,16 @@ void basic_task::reset_task() {
 /**
  * @brief Swap to current task
 */
-void basic_task::swap_to_task() {
-  if (task_->status == kTaskStatusStopped) {
-    return;
-  }
-  // Update running task
-  basic_task::running_task() = this->shared_from_this();
+void basic_task::swap_to_task(stack_context_t* main_ctx) {
   task_->status = kTaskStatusRunning;
 
 #if PECO_TARGET_APPLE
-  if (!setjmp(*get_main_context())) {
+  if (!setjmp(*main_ctx)) {
     longjmp(task_->ctx, 1);
   }
 #else
-  swapcontext(get_main_context(), &(this->task_->ctx));
+  swapcontext(main_ctx, &(this->task_->ctx));
 #endif
-
-  basic_task::running_task() = nullptr;
 
   // Only when the task worker normal exit, the status will remined 
   // as running, then we need to check if this is a repeatable task
@@ -205,7 +160,7 @@ void basic_task::swap_to_task() {
       --task_->repeat_count;
     }
     task_->next_fire_time += task_->interval;
-    this->reset_task();
+    this->reset_task(main_ctx);
     task_->status = kTaskStatusPending;
   }
 }
@@ -215,27 +170,6 @@ void basic_task::swap_to_task() {
 */
 void basic_task::update_interval(duration_t interval) {
   task_->interval = interval;
-}
-
-/**
- * @brief Get Current running task
-*/
-std::shared_ptr<basic_task>& basic_task::running_task() {
-  thread_local static std::shared_ptr<basic_task> s_running_task = nullptr;
-  return s_running_task;
-}
-
-/**
- * @brief Swap to main context
-*/
-void basic_task::swap_to_main() {
-#if PECO_TARGET_APPLE
-  if (!setjmp(basic_task::running_task()->task_->ctx)) {
-    longjmp(*get_main_context(), 1);
-  }
-#else
-  swapcontext(&(basic_task::running_task()->task_->ctx), get_main_context());
-#endif
 }
 
 /**
@@ -338,33 +272,6 @@ const char* basic_task::get_name() const {
 */
 task_id_t basic_task::parent_task() const {
   return extra_->parent_tid;
-}
-
-/**
- * @brief Fetch the created task by its id
-*/
-std::shared_ptr<basic_task> basic_task::fetch(task_id_t tid) {
-  if (tid == kInvalidateTaskId) return nullptr;
-  auto t_it = get_task_cache().find(tid);
-  if (t_it == get_task_cache().end()) {
-    return nullptr;
-  }
-  return t_it->second;
-}
-/**
- * @brief Get the cache task count
-*/
-size_t basic_task::cache_size() {
-  return get_task_cache().size();
-}
-
-/**
- * @brief Scan all cached task
-*/
-void basic_task::foreach(std::function<void(std::shared_ptr<basic_task>)> handler) {
-  for (const auto& item : get_task_cache()) {
-    handler(item.second);
-  }
 }
 
 } // namespace peco
