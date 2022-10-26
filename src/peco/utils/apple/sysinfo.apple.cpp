@@ -42,6 +42,7 @@ SOFTWARE.
 #include <mach/task_info.h>
 #include <sys/sysctl.h>
 #include <vector>
+#include <unistd.h>
 
 namespace peco {
 
@@ -223,6 +224,13 @@ uint64_t memory_usage() {
 
 // Get current process's name
 const std::string &process_name() { return g_inner_sys_info().proc_name; }
+
+/**
+ * @brief Check if current thread is main thread
+*/
+bool is_main_thread() {
+  return pthread_main_np() != 0;
+}
 
 } // namespace peco
 

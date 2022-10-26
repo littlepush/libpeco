@@ -35,6 +35,7 @@ SOFTWARE.
 #define PECO_LOOP_H__
 
 #include "peco/task/task.h"
+#include <thread>
 
 namespace peco {
 
@@ -59,10 +60,6 @@ public:
   task run_delay(worker_t worker, duration_t delay, const char* name = nullptr);
 
 public:
-  /**
-   * @brief Entrypoint of current loop, will block current thread
-  */
-  int main();
 
   /**
    * @brief Get current loop's load average
@@ -81,6 +78,26 @@ public:
   */
   static loop& current();
 
+  /**
+   * @brief Check if current thread is running in a loop
+  */
+  static bool running_in_loop();
+
+  /**
+   * @brief Start in main thread, throw exception when current thread is not main thread
+  */
+  static int start_main_loop(worker_t entrance_pointer);
+
+  /**
+   * @brief Create a new loop(with new thread)
+  */
+  static loop* creeate_loop();
+
+  /**
+   * @brief Delete a loop and cancel all pending task, then destroy the inner thread
+  */
+  static void* destroy_loop(loop* lp);
+
 public:
   /**
    * @brief D'stor
@@ -89,14 +106,34 @@ public:
 
 protected:
   /**
+   * @brief Entrypoint of current loop, will block current thread
+  */
+  int main();
+
+  /**
    * @brief Not allow to create loop object
   */
   loop();
 
   /**
+   * @brief Start to listen cross-thread event
+  */
+  void start_event_listen();
+
+  /**
+   * @brief Stop the cross-thread event listener
+  */
+  void stop_event_listen();
+
+  /**
    * @brief internal impl
   */
   loopimpl* impl = nullptr;
+
+  /**
+   * @brief binding thread
+  */
+  std::thread::id tid_;
 };
 
 /**
@@ -116,10 +153,6 @@ task run_loop(worker_t worker, duration_t interval, const char* name = nullptr);
 */
 task run_delay(worker_t worker, duration_t delay, const char* name = nullptr);
 /**
- * @brief Entrypoint of current loop, will block current thread
-*/
-int main();
-/**
  * @brief Get current loop's load average
 */
 double load_average();
@@ -129,6 +162,33 @@ double load_average();
 void exit(int code = 0);
 
 } // namespace current_loop
+
+/**
+ * @brief Get the main thread loop
+*/
+namespace main_loop {
+/**
+ * @brief Start a new normal task
+*/
+task run(worker_t worker, const char* name = nullptr);
+/**
+ * @brief Start a loop task
+*/
+task run_loop(worker_t worker, duration_t interval, const char* name = nullptr);
+/**
+ * @brief Start a task after given <delay>
+*/
+task run_delay(worker_t worker, duration_t delay, const char* name = nullptr);
+/**
+ * @brief Get current loop's load average
+*/
+double load_average();
+/**
+ * @brief Invoke in any task, which will case current loop to break and return from main
+*/
+void exit(int code = 0);
+
+} // namespace main_loop
 
 }
 

@@ -238,6 +238,13 @@ uint64_t memory_usage() {
 // Get current process's name
 const std::string &process_name() { return g_inner_sys_info().proc_name; }
 
+/**
+ * @brief Check if current thread is main thread
+*/
+bool is_main_thread() {
+  return getpid() == gettid();
+}
+
 } // namespace peco
 
 #endif

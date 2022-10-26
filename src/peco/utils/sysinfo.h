@@ -60,6 +60,11 @@ uint64_t memory_usage();
 // Get current process's name
 const std::string & process_name();
 
+/**
+ * @brief Check if current thread is main thread
+*/
+bool is_main_thread();
+
 } // namespace peco
 
 #endif
