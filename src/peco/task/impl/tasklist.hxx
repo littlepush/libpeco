@@ -149,7 +149,7 @@ public:
   /**
    * @brief Erase all fd related item
   */
-  void erase(fd_t fd);
+  void erase(fd_t fd, std::function<basic_task_ptr_t(task_id_t)> p_find);
 
   /**
    * @brief Get the task count

@@ -91,7 +91,7 @@ const char *hexdump::line(size_t index) const {
   if (sizeof(intptr_t) == 4) {
 // 32Bit
 #if !PECO_TARGET_WIN
-    sprintf(_buf, "%08x: ", (unsigned int)(intptr_t)_begin_data);
+    snprintf(_buf, LINE_BUF_SIZE, "%08x: ", (unsigned int)(intptr_t)_begin_data);
 #else
     sprintf_s(_buf, LINE_BUF_SIZE,
               "%08x: ", (unsigned int)(intptr_t)_begin_data);
@@ -99,7 +99,7 @@ const char *hexdump::line(size_t index) const {
   } else {
 // 64Bit
 #if !PECO_TARGET_WIN
-    sprintf(_buf, "%016lx: ", (unsigned long)(intptr_t)_begin_data);
+    snprintf(_buf, LINE_BUF_SIZE, "%016lx: ", (unsigned long)(intptr_t)_begin_data);
 #else
     sprintf_s(_buf, LINE_BUF_SIZE,
               "%016lx: ", (unsigned long)(intptr_t)_begin_data);
@@ -108,7 +108,7 @@ const char *hexdump::line(size_t index) const {
   size_t _line_size = this->__line_size(index);
   for (size_t _c = 0; _c < _line_size; ++_c) {
 #if !PECO_TARGET_WIN
-    sprintf(_buf + _c * 3 + ADDR_SIZE, "%02x ",
+    snprintf(_buf + _c * 3 + ADDR_SIZE, LINE_BUF_SIZE, "%02x ",
 #else
     sprintf_s(_buf + _c * 3 + ADDR_SIZE, LINE_BUF_SIZE, "%02x ",
 #endif

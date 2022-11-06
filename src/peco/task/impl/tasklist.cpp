@@ -148,18 +148,20 @@ void tasklist::erase(basic_task_ptr_t t, fd_t fd, EventType event_type) {
 /**
  * @brief Erase all fd related item
 */
-void tasklist::erase(fd_t fd) {
+void tasklist::erase(fd_t fd, std::function<basic_task_ptr_t(task_id_t)> p_find) {
   const static EventType kEventTypePool[] = {kEventTypeRead, kEventTypeWrite};
   if (fd == -1l) return;
   for (size_t i = 0; i < 2u; ++i) {
     auto fd_range = fd_cache_map_.equal_range(cache_fd_t(fd, kEventTypePool[i]));
     for (auto fd_it = fd_range.first; fd_it != fd_range.second;) {
       // remove related timed list
-      auto ptrt = basic_task::fetch(fd_it->second);
-      if ( ptrt != nullptr ) {
-        ordered_time_map_.erase(cache_item_t(ptrt));
+      if (p_find) {
+        auto ptrt = p_find(fd_it->second);
+        if ( ptrt != nullptr ) {
+          ordered_time_map_.erase(cache_item_t(ptrt));
+        }
+        fd_it = fd_cache_map_.erase(fd_it);
       }
-      fd_it = fd_cache_map_.erase(fd_it);
     }
   }
 }

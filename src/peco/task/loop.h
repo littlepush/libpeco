@@ -96,7 +96,7 @@ public:
   /**
    * @brief Delete a loop and cancel all pending task, then destroy the inner thread
   */
-  static void* destroy_loop(loop* lp);
+  static void destroy_loop(loop* lp);
 
 public:
   /**

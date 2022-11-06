@@ -48,8 +48,8 @@ stack_context_t* loopcontext::get_main_context() {
  * @brief create a task object
 */
 std::shared_ptr<basic_task> loopcontext::create_task(
-  worker_t worker, repeat_count_t repeat_count = REPEAT_COUNT_ONESHOT, 
-  duration_t interval = PECO_TIME_MS(0)
+  worker_t worker, repeat_count_t repeat_count, 
+  duration_t interval
 ) {
   auto t = std::shared_ptr<basic_task>(new basic_task(
     stack_cache_.fetch(), 
@@ -58,6 +58,7 @@ std::shared_ptr<basic_task> loopcontext::create_task(
   ));
   t->reset_task(this->get_main_context());
   task_cache_[t->task_id()] = t;
+  return t;
 }
 
 /**

@@ -99,13 +99,13 @@ inline std::string &string_capitalize(std::string &s,
 enum { kAddrSize = sizeof(intptr_t) * 2 + 2 };
 
 template <typename T> inline std::string ptr_str(const T *p) {
-  std::string _ptrs(kAddrSize, '\0');
+  std::string _ptrs(kAddrSize + 1, '\0');
   if (sizeof(intptr_t) == 4) {
     // 32Bit
-    sprintf(&_ptrs[0], "0x%08x", (unsigned int)(intptr_t)p);
+    snprintf(&_ptrs[0], kAddrSize, "0x%08x", (unsigned int)(intptr_t)p);
   } else {
     // 64Bit
-    sprintf(&_ptrs[0], "0x%016lx", (unsigned long)(intptr_t)p);
+    snprintf(&_ptrs[0], kAddrSize, "0x%016lx", (unsigned long)(intptr_t)p);
   }
   return _ptrs;
 }

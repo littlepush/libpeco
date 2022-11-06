@@ -55,7 +55,7 @@ void __inaddr2ipstring(uint32_t inaddr, std::string& ipstring) {
 #if PECO_TARGET_WIN
   int _l = sprintf_s( &ipstring[0], 16, "%u.%u.%u.%u",
 #else
-  int _l = sprintf( &ipstring[0], "%u.%u.%u.%u",
+  int _l = snprintf( &ipstring[0], 16, "%u.%u.%u.%u",
 #endif
     (inaddr >> (0 * 8)) & 0x00FF,
     (inaddr >> (1 * 8)) & 0x00FF,

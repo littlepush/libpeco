@@ -38,6 +38,8 @@ SOFTWARE.
 #include "peco/utils/bufguard.h"
 #include "peco/task/impl/taskcontext.hxx"
 
+#include <list>
+
 namespace peco {
 
 class stack_cache {

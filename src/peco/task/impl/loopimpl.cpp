@@ -55,7 +55,9 @@ void loopimpl::main() {
     [=](fd_t fd) {
       auto id_list = this->timed_list_.search_all(fd);
       // erase task related with this fd
-      this->timed_list_.erase(fd);
+      this->timed_list_.erase(fd, [this](task_id_t tid) {
+        return this->find_task(tid);
+      });
       for (const auto& tid : id_list) {
         auto ptrt = this->find_task(tid);
         if (ptrt) {

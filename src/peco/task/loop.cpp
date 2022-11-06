@@ -144,6 +144,7 @@ int loop::start_main_loop(worker_t entrance_pointer) {
 
   // Try to destroy all loop
   
+  return ret;
 }
 
 /**
@@ -179,7 +180,7 @@ loop* loop::creeate_loop() {
 /**
  * @brief Delete a loop and cancel all pending task, then destroy the inner thread
 */
-void* loop::destroy_loop(loop* lp) {
+void loop::destroy_loop(loop* lp) {
   if (!lp) {
     return;
   }
