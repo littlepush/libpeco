@@ -173,7 +173,7 @@ std::string base64_encode(const std::string &str) {
 
   if (_output_str_len >= 4) {
     // truncatedata to match actual output lengt
-    _result.resize(_output_str_len);
+    _result.resize((size_t)_output_str_len);
   } else {
     _result.clear();
   }

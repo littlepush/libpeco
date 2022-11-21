@@ -144,7 +144,7 @@ struct __inner_sys_info {
     if (pdh_status != ERROR_SUCCESS) {
       _tprintf(TEXT("PdhOpenQuery Failed: 0x%8.8X\n"), pdh_status);
     }
-    for (int n = 0; n < cc; ++n) {
+    for (int n = 0; n < (int)cc; ++n) {
       cpu_loads.push_back(0.f);
       TCHAR counter_path[255] = {'\0'};
       _stprintf_s(counter_path, 255, TEXT("\\Processor(%d)\\%% Processor Time"), n);
