@@ -65,6 +65,7 @@ public:
   // C'str
   any() noexcept;
   any( const any& other );
+  any( any& other );
   any( any&& other ) noexcept;
 
   template< class ValueType >

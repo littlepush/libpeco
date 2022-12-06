@@ -45,6 +45,12 @@ any::any( const any& other ) {
     cast_ = other.cast_;
   }
 }
+any::any( any& other ) {
+  if (other.cast_ != nullptr) {
+    data_ = other.cast_(other.data_.get());
+    cast_ = other.cast_;
+  }
+}
 
 any::any( any&& other ) noexcept : data_(std::move(other.data_)), cast_(other.cast_) 
 { }
