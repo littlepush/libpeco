@@ -182,7 +182,10 @@ public:
   void add_trigger(const key_type &key, trigger_operator_t &&t_op) {
     auto _tit = trigger_map_.find(key);
     if (_tit == trigger_map_.end()) {
-      trigger_map_[key] = (trigger_op_list_t){std::move(t_op)};
+      trigger_op_list_t opl;
+      opl.emplace_back(std::move(t_op));
+      trigger_map_.emplace(std::move(key), std::move(opl));
+      // trigger_map_[key] = (trigger_op_list_t){std::move(t_op)};
     } else {
       _tit->second.emplace_back(std::move(t_op));
     }

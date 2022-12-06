@@ -66,6 +66,14 @@ any& any::operator=( any&& rhs ) noexcept {
   cast_ = rhs.cast_;
   return *this;
 }
+// Compare
+bool any::operator == (const any& rhs) const {
+  if (this == &rhs) return true;
+  return data_.get() == rhs.data_.get();
+}
+bool any::operator != (const any& rhs) const {
+  return !(*this == rhs);
+}
 
 void any::reset() noexcept {
   data_ = nullptr;

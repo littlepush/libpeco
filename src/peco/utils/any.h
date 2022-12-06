@@ -83,6 +83,10 @@ public:
   any& operator=( const any& rhs );
   any& operator=( any&& rhs ) noexcept;
 
+  // Compare
+  bool operator == (const any& rhs) const;
+  bool operator != (const any& rhs) const;
+
   template<typename ValueType> any& operator=( ValueType&& rhs ) {
     data_ = std::static_pointer_cast<void>(std::make_shared<ValueType>(std::move(rhs)));
     cast_ = no_type_copy<ValueType>::cast;
