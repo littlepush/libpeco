@@ -79,6 +79,13 @@ public:
           std::make_shared<ValueType>(std::forward<ValueType>(value))
         )), 
         cast_(no_type_copy<ValueType>::cast) {}
+  
+  template< class ValueType >
+    any(const ValueType& value)
+      : data_(std::static_pointer_cast<void>(
+        std::make_shared<ValueType>(value)
+      )),
+      cast_(no_type_copy<ValueType>::cast) {}
 
   // Copy
   any& operator=( const any& rhs );
