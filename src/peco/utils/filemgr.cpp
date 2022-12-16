@@ -341,6 +341,18 @@ void fs_remove(const std::string &path) {
   }
   // do nothing if not existed
 }
+// Get file size
+size_t fs_size(const std::string& path) {
+  struct PECO_F_STAT _f_info;
+  if (PECO_F_STAT(path.c_str(), &_f_info) != 0)
+    return 0;
+  if (!(bool)(_f_info.st_mode & PECO_F_IFDIR)) {
+    // this is folder
+    return 0;
+  }
+  return _f_info.st_size;
+}
+
 } // namespace peco
 
 // Push Chen

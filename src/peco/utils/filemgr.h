@@ -77,6 +77,9 @@ void rek_scan_dir( const std::string& path, dir_filter_t filter, bool ignore_hid
 // Remove a folder or file
 void fs_remove( const std::string& path );
 
+// Get file size
+size_t fs_size(const std::string& path);
+
 } // namespace peco
 
 #endif
