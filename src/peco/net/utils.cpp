@@ -509,18 +509,34 @@ bool read(std::string& buffer,
   do {
     int _retCode = f(hSo, &_buffer[0] + _received, static_cast<socket_data_len_t>(_leftspace));
     if (_retCode < 0) {
+#if PECO_TARGET_WIN
+      int err = WSAGetLastError();
+      if (err == WSAEINTR) {
+        continue;
+      }
+      if (err == WSAEWOULDBLOCK || err == WSAEMSGSIZE) {
+        log::warning << "Warning: get WSAEMSGSIZE on socket(" << hSo << "), data too large" << std::endl;
+        _buffer.resize(_received);
+        break;
+      }
+      _buffer.resize(0);
+      log::error << "Error: Failed to receive data on socket(" << hSo << "), "
+                 << "error no: " << err << std::endl;
+      return false;
+#else
       if (errno == EINTR)
         continue; // signal 7, retry
-      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK || errno == ) {
         // No more data on a non-blocking socket
         _buffer.resize(_received);
         break;
       }
       // Other error
       _buffer.resize(0);
-      log::error << "Error: Failed to receive data on socket(" << hSo << ", "
+      log::error << "Error: Failed to receive data on socket(" << hSo << "), "
                  << get_sys_error(errno) << std::endl;
       return false;
+#endif
     } else if (_retCode == 0) {
       // Peer Close
       _buffer.resize(0);
