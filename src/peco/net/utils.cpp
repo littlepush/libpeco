@@ -526,7 +526,7 @@ bool read(std::string& buffer,
 #else
       if (errno == EINTR)
         continue; // signal 7, retry
-      if (errno == EAGAIN || errno == EWOULDBLOCK || errno == ) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
         // No more data on a non-blocking socket
         _buffer.resize(_received);
         break;
