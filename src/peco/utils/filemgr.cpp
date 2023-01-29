@@ -346,7 +346,7 @@ size_t fs_size(const std::string& path) {
   struct PECO_F_STAT _f_info;
   if (PECO_F_STAT(path.c_str(), &_f_info) != 0)
     return 0;
-  if (!(bool)(_f_info.st_mode & PECO_F_IFDIR)) {
+  if ((bool)(_f_info.st_mode & PECO_F_IFDIR)) {
     // this is folder
     return 0;
   }
