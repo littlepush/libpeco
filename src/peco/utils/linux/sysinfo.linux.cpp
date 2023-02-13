@@ -40,6 +40,13 @@ SOFTWARE.
 #include <sys/sysinfo.h>
 #include <sstream>
 
+#ifndef SYS_gettid
+#include <sys/syscall.h>
+#include <sys/signal.h>
+#include <unistd.h>
+#define gettid()    syscall(__NR_gettid)
+#endif
+
 namespace peco {
 
 enum CPU_TIME {
