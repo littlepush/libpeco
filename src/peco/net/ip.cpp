@@ -70,7 +70,7 @@ ip_t::ip_t() : ip_("255.255.255.255") {}
 
 // Copy & Move Operators
 ip_t::ip_t(const ip_t& rhs) : ip_(rhs.ip_) { }
-ip_t::ip_t(ip_t&& lhs) : ip_(move(lhs.ip_)) { }
+ip_t::ip_t(ip_t&& lhs) : ip_(std::move(lhs.ip_)) { }
 ip_t& ip_t::operator = (const ip_t& rhs) {
   if ( this == &rhs ) return *this;
   ip_ = rhs.ip_;
@@ -78,7 +78,7 @@ ip_t& ip_t::operator = (const ip_t& rhs) {
 }
 ip_t& ip_t::operator = (ip_t&& lhs) {
   if ( this == &lhs ) return *this;
-  ip_ = move(lhs.ip_);
+  ip_ = std::move(lhs.ip_);
   return *this;
 }
 
