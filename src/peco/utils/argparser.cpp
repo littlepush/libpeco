@@ -139,7 +139,7 @@ bool argparser::parse(const std::string &config_file) {
     std::string _value =
       (_skip_size == _line.size() ? "" : _line.substr(_skip_size));
     peco::trim(_value);
-    s->second(move(_value));
+    s->second(std::move(_value));
   }
   return true;
 }
