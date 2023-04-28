@@ -52,7 +52,11 @@ protected:
   template <typename... T, std::size_t... I>
   static auto __deduce_make_tuple__(std::index_sequence<I...>) {
     using full_type = std::tuple<T...>;
+    #if PECO_USE_GNU
     return std::make_tuple((typename std::tuple_element<I, full_type>::type){}...);
+    #else
+    return std::make_tuple(std::tuple_element<I, full_type>::type()...);
+    #endif
   }
 
   /**
@@ -90,7 +94,7 @@ public:
   /**
    * @brief Value Type
   */
-  typedef typename std::tuple_element<value_index, row_t>::type value_t;
+  typedef typename std::tuple_element<rowmap::value_index, row_t>::type value_t;
 
   /**
    * @brief Index storage in index array
