@@ -207,7 +207,7 @@ public:
    * @brief Find the first row match the key, or end of db
   */
   template<std::size_t key_index>
-  iterator find_first(const typename std::tuple_element<key_index, index_t>::type& key) {
+  iterator find_first(const typename std::tuple_element<key_index, index_t>::type& key) const {
     auto result = find_by_one_key_<key_index>(key);
     if (result.size() == 0) {
       return db_storage_.end();
@@ -219,7 +219,7 @@ public:
    * @brief Get all rows of the key in specified column
   */
   template<std::size_t... key_index>
-  std::list<iterator> find(const typename std::tuple_element<key_index, index_t>::type&... key) {
+  std::list<iterator> find(const typename std::tuple_element<key_index, index_t>::type&... key) const {
     return merge_result_(find_by_one_key_<key_index>(key)...);
   }
 
@@ -235,7 +235,7 @@ public:
    * @brief Get the value parts of the iterator
    * if value_it is end(), undefined behaive.
   */
-  value_t& value_of(iterator value_it) {
+  value_t& value_of(iterator value_it) const {
     return std::get<value_index>(*value_it);
   }
 
@@ -300,7 +300,7 @@ protected:
    * @brief Find rows by one key
   */
   template<std::size_t key_index>
-  std::list<iterator> find_by_one_key_(const typename std::tuple_element<key_index, index_t>::type& key) {
+  std::list<iterator> find_by_one_key_(const typename std::tuple_element<key_index, index_t>::type& key) const {
     using key_t = typename std::tuple_element<key_index, index_t>::type;
     using index_map_t = std::multimap<key_wrapper_t<key_t>, dbi_t>;
 
@@ -319,10 +319,10 @@ protected:
    * @brief Merge several key's find result
   */
   template<typename list1, typename... list_t>
-  std::list<iterator> merge_result_(const list1& l1, const list_t&...ls) {
+  std::list<iterator> merge_result_(const list1& l1, const list_t&...ls) const {
     return merge_result_(l1, merge_result_(ls...));
   }
-  std::list<iterator> merge_result_(const std::list<iterator>& l1, const std::list<iterator>& l2) {
+  std::list<iterator> merge_result_(const std::list<iterator>& l1, const std::list<iterator>& l2) const {
     std::list<iterator> r;
     for (auto i : l1) {
       for (auto j : l2) {
@@ -333,7 +333,7 @@ protected:
     }
     return r;
   }
-  std::list<iterator> merge_result_(const std::list<iterator>& l) {
+  std::list<iterator> merge_result_(const std::list<iterator>& l) const {
     return l;
   }
 
