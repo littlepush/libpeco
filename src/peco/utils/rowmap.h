@@ -219,7 +219,11 @@ public:
   }
   template<std::size_t key_index>
   const_iterator find_first(const typename std::tuple_element<key_index, index_t>::type& key) const {
-    return find_first<key_index>(key);
+    auto result = find_by_one_key_<key_index>(key);
+    if (result.size() == 0) {
+      return db_storage_.end();
+    }
+    return *result.begin();
   }
 
   /**
