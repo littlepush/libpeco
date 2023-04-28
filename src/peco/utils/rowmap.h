@@ -82,7 +82,6 @@ public:
   /**
    * @brief Row iterator
   */
-  typedef typename db_t::iterator dbi_t;
   typedef typename db_t::iterator iterator;
   typedef typename db_t::const_iterator const_iterator;
   typedef typename db_t::reverse_iterator reverse_iterator;
@@ -207,19 +206,27 @@ public:
    * @brief Find the first row match the key, or end of db
   */
   template<std::size_t key_index>
-  iterator find_first(const typename std::tuple_element<key_index, index_t>::type& key) const {
+  iterator find_first(const typename std::tuple_element<key_index, index_t>::type& key) {
     auto result = find_by_one_key_<key_index>(key);
     if (result.size() == 0) {
       return db_storage_.end();
     }
     return *result.begin();
   }
+  template<std::size_t key_index>
+  const_iterator find_first(const typename std::tuple_element<key_index, index_t>::type& key) const {
+    return find_first<key_index>(key);
+  }
 
   /**
    * @brief Get all rows of the key in specified column
   */
   template<std::size_t... key_index>
-  std::list<iterator> find(const typename std::tuple_element<key_index, index_t>::type&... key) const {
+  std::list<iterator> find(const typename std::tuple_element<key_index, index_t>::type&... key) {
+    return merge_result_(find_by_one_key_<key_index>(key)...);
+  }
+  template<std::size_t... key_index>
+  std::list<const_iterator> find(const typename std::tuple_element<key_index, index_t>::type&... key) const {
     return merge_result_(find_by_one_key_<key_index>(key)...);
   }
 
@@ -235,6 +242,9 @@ public:
    * @brief Get the value parts of the iterator
    * if value_it is end(), undefined behaive.
   */
+  const value_t& value_of(const_iterator value_it) const {
+    return std::get<value_index>(*value_it);
+  }
   value_t& value_of(iterator value_it) const {
     return std::get<value_index>(*value_it);
   }
@@ -272,7 +282,7 @@ protected:
   */
   template <class key_t>
   int init_single_(std::size_t col_index) {
-    auto index_map = std::make_shared<std::multimap<key_wrapper_t<key_t>, dbi_t>>();
+    auto index_map = std::make_shared<std::multimap<key_wrapper_t<key_t>, iterator>>();
     db_index_[col_index] = std::static_pointer_cast<void>(index_map);
     return 0;
   }
@@ -281,7 +291,7 @@ protected:
    * @brief Build index for each row
   */
   template <std::size_t... I>
-  void build_index_(dbi_t row, std::index_sequence<I...>) {
+  void build_index_(iterator row, std::index_sequence<I...>) {
     using unused = int[];
     (void)unused{(build_index_<typename std::tuple_element<I, index_t>::type>(std::get<I>(*row), I, row), 0)...};
   }
@@ -290,8 +300,8 @@ protected:
    * @brief Build index for single key
   */
   template <class key_t>
-  void build_index_(const key_t& key, std::size_t col_index, dbi_t row) {
-    using index_map_t = std::multimap<key_wrapper_t<key_t>, dbi_t>;
+  void build_index_(const key_t& key, std::size_t col_index, iterator row) {
+    using index_map_t = std::multimap<key_wrapper_t<key_t>, iterator>;
     auto key_map = std::static_pointer_cast<index_map_t>(db_index_[col_index]);
     key_map->emplace(key_wrapper_t<key_t>(key), row);
   }
@@ -300,9 +310,9 @@ protected:
    * @brief Find rows by one key
   */
   template<std::size_t key_index>
-  std::list<iterator> find_by_one_key_(const typename std::tuple_element<key_index, index_t>::type& key) const {
+  std::list<iterator> find_by_one_key_(const typename std::tuple_element<key_index, index_t>::type& key) {
     using key_t = typename std::tuple_element<key_index, index_t>::type;
-    using index_map_t = std::multimap<key_wrapper_t<key_t>, dbi_t>;
+    using index_map_t = std::multimap<key_wrapper_t<key_t>, iterator>;
 
     // get the index
     auto key_map = std::static_pointer_cast<index_map_t>(db_index_[key_index]);
@@ -314,15 +324,30 @@ protected:
     }
     return r;
   }
+  template<std::size_t key_index>
+  std::list<const_iterator> find_by_one_key_(const typename std::tuple_element<key_index, index_t>::type& key) const {
+    using key_t = typename std::tuple_element<key_index, index_t>::type;
+    using index_map_t = std::multimap<key_wrapper_t<key_t>, iterator>;
+
+    // get the index
+    auto key_map = std::static_pointer_cast<index_map_t>(db_index_[key_index]);
+    auto range = key_map->equal_range(key_wrapper_t<key_t>(key));
+
+    std::list<const_iterator> r;
+    for (auto i = range.first; i != range.second; ++i) {
+      r.push_back(i->second);
+    }
+    return r;
+  }
 
   /**
    * @brief Merge several key's find result
   */
   template<typename list1, typename... list_t>
-  std::list<iterator> merge_result_(const list1& l1, const list_t&...ls) const {
+  std::list<iterator> merge_result_(const list1& l1, const list_t&...ls) {
     return merge_result_(l1, merge_result_(ls...));
   }
-  std::list<iterator> merge_result_(const std::list<iterator>& l1, const std::list<iterator>& l2) const {
+  std::list<iterator> merge_result_(const std::list<iterator>& l1, const std::list<iterator>& l2) {
     std::list<iterator> r;
     for (auto i : l1) {
       for (auto j : l2) {
@@ -333,7 +358,26 @@ protected:
     }
     return r;
   }
-  std::list<iterator> merge_result_(const std::list<iterator>& l) const {
+  std::list<iterator> merge_result_(const std::list<iterator>& l) {
+    return l;
+  }
+
+  template<typename list1, typename... list_t>
+  std::list<const_iterator> merge_result_(const list1& l1, const list_t&...ls) const {
+    return merge_result_(l1, merge_result_(ls...));
+  }
+  std::list<const_iterator> merge_result_(const std::list<const_iterator>& l1, const std::list<const_iterator>& l2) const {
+    std::list<const_iterator> r;
+    for (auto i : l1) {
+      for (auto j : l2) {
+        if (i == j) {
+          r.push_back(i);
+        }
+      }
+    }
+    return r;
+  }
+  std::list<const_iterator> merge_result_(const std::list<const_iterator>& l) const {
     return l;
   }
 
@@ -341,7 +385,7 @@ protected:
    * @brief Erase all index
   */
   template <std::size_t... I>
-  void erase_index_(dbi_t row, std::index_sequence<I...>) {
+  void erase_index_(iterator row, std::index_sequence<I...>) {
     using unused = int[];
     (void)unused{(erase_index_<typename std::tuple_element<I, index_t>::type>(std::get<I>(*row), I, row), 0)...};
   }
@@ -350,8 +394,8 @@ protected:
    * @brief Erase a single key with the row
   */
   template <class key_t>
-  void erase_index_(const key_t& key, std::size_t col_index, dbi_t row) {
-    using index_map_t = std::multimap<key_wrapper_t<key_t>, dbi_t>;
+  void erase_index_(const key_t& key, std::size_t col_index, iterator row) {
+    using index_map_t = std::multimap<key_wrapper_t<key_t>, iterator>;
     auto key_map = std::static_pointer_cast<index_map_t>(db_index_[col_index]);
     auto fr = key_map->equal_range(key_wrapper_t<key_t>(key));
     auto e_it = key_map->end();
@@ -380,7 +424,7 @@ protected:
   */
   template <class key_t>
   void clear_index_(std::size_t col_index) {
-    using index_map_t = std::multimap<key_wrapper_t<key_t>, dbi_t>;
+    using index_map_t = std::multimap<key_wrapper_t<key_t>, iterator>;
     auto key_map = std::static_pointer_cast<index_map_t>(db_index_[col_index]);
     key_map->clear();
   }
