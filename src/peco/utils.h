@@ -47,6 +47,7 @@ SOFTWARE.
 #include "peco/utils/bufguard.h"
 #include "peco/utils/logs.h"
 #include "peco/utils/rowmap.h"
+#include "peco/utils/messagebus.h"
 
 #endif
 
