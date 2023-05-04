@@ -58,7 +58,7 @@ public:
   }
   void unsubscribe(const IdentityType& id, const KeyType& key) {
     std::lock_guard<std::shared_mutex> _(handler_lock_);
-    auto its = handler_map_.find<IDENTITY_INDEX, KEY_INDEX>(id, key);
+    auto its = handler_map_.template find<IDENTITY_INDEX, KEY_INDEX>(id, key);
     for (auto& i : its) {
       handler_map_.erase(i);
     }
