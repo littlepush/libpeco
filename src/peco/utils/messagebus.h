@@ -80,7 +80,7 @@ public:
 
 protected:
   std::shared_mutex handler_lock_;
-  rowmap<IdentityType, KeyType, ValueType> handler_map_;
+  rowmap<IdentityType, KeyType, event_handler_t> handler_map_;
 };
 
 } // namespace peco
