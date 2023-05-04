@@ -72,7 +72,7 @@ public:
   }
   void publish(const KeyType& key, const ValueType& value) {
     std::shared_lock<std::shared_mutex> _(handler_lock_);
-    auto its = handler_map_.find<KEY_INDEX>(key);
+    auto its = handler_map_.template find<KEY_INDEX>(key);
     for (auto& i : its) {
       handler_map_.value_of(i)(value);
     }
