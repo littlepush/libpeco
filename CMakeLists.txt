@@ -41,32 +41,6 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "")
   set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-# Group sources into different source group according to the file path
-function(peco_group_sources target begin_dir)
-  set(SOURCE_GROUP_DELIMITER "/")
-  set(last_dir "")
-  set(files "")
-
-  get_target_property(sources ${target} SOURCES)
-
-  foreach(file ${sources})
-    file(RELATIVE_PATH relative_file "${begin_dir}" ${file})
-    get_filename_component(dir "${relative_file}" PATH)
-    if(NOT "${dir}" STREQUAL "${last_dir}")
-      if(files)
-        source_group("${last_dir}" FILES ${files})
-      endif()
-      set(files "")
-    endif()
-    set(files ${files} ${file})
-    set(last_dir "${dir}")
-  endforeach()
-
-  if(files)
-    source_group("${last_dir}" FILES ${files})
-  endif()
-endfunction()
-
 if (NOT DEFINED PECO_BUILD_TASK)
   set(INCLUDE_MODULE_TASK ON)
 else()
@@ -157,9 +131,6 @@ endif()
 
 # Add Source
 add_subdirectory(src)
-
-# Group the source
-peco_group_sources(peco "${CMAKE_CURRENT_SOURCE_DIR}")
 
 if (NOT DEFINED PECO_ENABLE_TEST)
   set(_PECO_BUILD_ENABLE_TEST ON)

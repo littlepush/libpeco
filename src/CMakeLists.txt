@@ -26,22 +26,22 @@ unset(LIBPECO_PUBLIC_HEADER CACHE)
 
 set(LIBPECO_INCLUDE_PATH "${CMAKE_CURRENT_SOURCE_DIR}" CACHE STRING "")
 
-file(GLOB PECO_PECO_SRC "${CMAKE_CURRENT_SOURCE_DIR}/peco/*.h")
-file(GLOB PECO_PECO_PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/peco/*.h")
+file(GLOB PECO_PECO_SRC "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
+file(GLOB PECO_PECO_PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
 
 set(LIBPECO_SRC_LIST "${CMAKE_CURRENT_SOURCE_DIR}/peco.h;${PECO_PECO_SRC}" CACHE STRING "")
 set(LIBPECO_PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/peco.h;${PECO_PECO_PUBLIC}" CACHE STRING "")
 
 if (${INCLUDE_MODULE_TASK})
-  set(PECO_PUBLIC_HEADER_INCLUDE_TASK "#include \"peco/task.h\"")
+  set(PECO_PUBLIC_HEADER_INCLUDE_TASK "#include \"task.h\"")
 else()
   set(PECO_PUBLIC_HEADER_INCLUDE_TASK "")
 endif()
 
 if(${INCLUDE_MODULE_NET})
-  set(PECO_PUBLIC_HEADER_INCLUDE_NET "#include \"peco/net.h\"")
+  set(PECO_PUBLIC_HEADER_INCLUDE_NET "#include \"net.h\"")
   if(${INCLUDE_MODULE_NET_EXTENSIONS})
-    set(PECO_PUBLIC_HEADER_INCLUDE_NET_EXT "#include \"peco/net_ext.h\"")
+    set(PECO_PUBLIC_HEADER_INCLUDE_NET_EXT "#include \"net_ext.h\"")
   else()
     set(PECO_PUBLIC_HEADER_INCLUDE_NET_EXT "")
   endif()
@@ -51,7 +51,76 @@ else()
 endif()
 
 # Add Source
-add_subdirectory(peco)
+add_subdirectory("basic")
+
+if (${INCLUDE_MODULE_TASK})
+  add_subdirectory("task")
+endif()
+
+if (${INCLUDE_MODULE_NET})
+  # Add Net and Log Module
+  add_subdirectory("net")
+
+  if (${INCLUDE_MODULE_NET_EXTENSIONS})
+    add_subdirectory("extensions")
+  endif()
+endif()
+
+if (NOT DEFINED PECO_STATIC)
+  set(_PECO_BUILD_STATIC_OPTION OFF)
+else()
+  set(_PECO_BUILD_STATIC_OPTION ${PECO_STATIC})
+endif()
+option(PECO_BUILD_STATIC "Build Static Library, default is OFF" ${_PECO_BUILD_STATIC_OPTION})
+if (PECO_BUILD_STATIC)
+  set(PECO_LIB_TYPE STATIC)
+else()
+  set(PECO_LIB_TYPE SHARED)
+endif()
+
+add_library(peco ${PECO_LIB_TYPE} 
+  ${LIBPECO_SRC_LIST} 
+  ${LIBPECO_UTILS_SRC} 
+  ${LIBPECO_COTASK_SRC} 
+  ${LIBPECO_CONET_SRC} 
+  ${LIBPECO_EXTENSIONS_SRC}
+)
+set_target_properties(peco PROPERTIES LINKER_LANGUAGE CXX)
+set_property(TARGET peco PROPERTY CXX_STANDARD 14)
+
+if (${INCLUDE_TASK_SHARED})
+  target_compile_definitions(peco PUBLIC "-DPECO_ENABLE_SHARETASK=1")
+else()
+  target_compile_definitions(peco PUBLIC "-DPECO_ENABLE_SHARETASK=0")
+endif()
+
+target_compile_options(peco PRIVATE
+  "$<$<CONFIG:Debug>:${PECO_CXX_FLAGS_DEBUG}>"
+  "$<$<CONFIG:Release>:${PECO_CXX_FLAGS_RELEASE}>"
+)
+
+if (NOT ${PECO_HOST_WINDOWS})
+  set_target_properties(peco PROPERTIES LINK_FLAGS "${PECO_LINK_FLAGS}")
+endif()
+
+set(_dir_output_ ${CMAKE_BINARY_DIR}/Output)
+set(_dir_debug_ ${CMAKE_BINARY_DIR}/Debug)
+set(_dir_release_ ${CMAKE_BINARY_DIR}/Release)
+
+set_target_properties(peco PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${_dir_output_})
+set_target_properties(peco PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${_dir_release_})
+set_target_properties(peco PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${_dir_debug_})
+
+set_target_properties(peco PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${_dir_output_})
+set_target_properties(peco PROPERTIES LIBRARY_OUTPUT_DIRECTORY_RELEASE ${_dir_release_})
+set_target_properties(peco PROPERTIES LIBRARY_OUTPUT_DIRECTORY_DEBUG ${_dir_debug_})
+
+set_target_properties(peco PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${_dir_output_})
+set_target_properties(peco PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${_dir_release_})
+set_target_properties(peco PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${_dir_debug_})
+
+# Add Include Path
+target_include_directories(peco PUBLIC ${LIBPECO_INCLUDE_PATH})
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/peco.h.cmake" "${CMAKE_CURRENT_SOURCE_DIR}/peco.h")
 

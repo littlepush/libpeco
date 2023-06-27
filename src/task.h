@@ -1,7 +1,7 @@
 /*
-    test_sysinfo.cpp
+    task.h
     libpeco
-    2022-02-13
+    2019-05-23
     Push Chen
 */
 
@@ -29,24 +29,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "basic.h"
-#include <thread>
+#pragma once
 
-int main(int argc, char *argv[]) {
-  peco::log::info << "Current Process Name: " << peco::process_name() << std::endl;
-  peco::log::info << "CPU Count: " << peco::cpu_count() << std::endl;
-  peco::log::info << "Total Memory: " << peco::total_memory() << "B" << std::endl;
-  peco::log::info << "Monitor For 10 Seconds: " << std::endl;
-  for (size_t i = 0; i < 10; ++i) {
-    peco::log::info << "-#" << (i + 1) << ": " << std::endl;
-    peco::log::info << " Memory Usage: " << peco::memory_usage() << "B" << std::endl;
-    peco::log::info << " Free Memory: " << peco::free_memory() << "B" << std::endl;
-    peco::log::info << " App CPU Usage: " << peco::cpu_usage() * 100 << "%" << std::endl;
-    auto _cpu_loads = peco::cpu_loads();
-    for (size_t c = 0; c < _cpu_loads.size(); ++c) {
-      peco::log::info << " Core #" << c << ": " << _cpu_loads[c] * 100 << "%" << std::endl;
-    }
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-  }
-  return 0;
-}
+#ifndef PECO_TASK_COTASK_H__
+#define PECO_TASK_COTASK_H__
+
+#include "task/taskdef.h"
+#include "task/task.h"
+#include "task/loop.h"
+#include "task/semaphore.h"
+#include "task/signal.h"
+
+#if PECO_ENABLE_SHARETASK
+#include "task/shared/loop.h"
+#include "task/shared/injector.h"
+#include "task/shared/task.h"
+#endif
+
+#endif
+
+// Push Chen

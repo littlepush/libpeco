@@ -1,7 +1,7 @@
 /*
-    peco.h
+    iprange.h
     libpeco
-    2020-01-08
+    2022-02-17
     Push Chen
 */
 
@@ -31,16 +31,62 @@ SOFTWARE.
 
 #pragma once
 
-#ifndef PECO_LIBPECO_PECO_H__
-#define PECO_LIBPECO_PECO_H__
+#ifndef PECO_NET_IPRANGE_H__
+#define PECO_NET_IPRANGE_H__
 
-// STD header
 #include "pecostd.h"
+#include "net/ip.h"
 
-#include "basic.h"
-${PECO_PUBLIC_HEADER_INCLUDE_TASK}
-${PECO_PUBLIC_HEADER_INCLUDE_NET}
-${PECO_PUBLIC_HEADER_INCLUDE_NET_EXT}
+namespace peco {
+
+/*!
+IP Range and IP Mask
+support format:
+  x.x.x.x
+  x.x.x.x/24
+mask should not bigger than 32
+*/
+class iprange_t {
+private:
+  ip_t            low_;
+  ip_t            high_;
+  uint32_t        mask_;
+
+  void __parse_range(const std::string &fmt);
+public:
+  iprange_t();
+
+  // Copye
+  iprange_t(const iprange_t& rhs);
+  iprange_t(iprange_t&& lhs);
+  iprange_t& operator =(const iprange_t& rhs);
+  iprange_t& operator =(iprange_t&& lhs);
+
+  // Format
+  explicit iprange_t(const std::string & fmt);
+  iprange_t(const ip_t& from, const ip_t& to);
+
+  // Validation
+  explicit operator bool() const;
+
+  // Output string
+  explicit operator const std::string() const;
+  std::string str() const;
+
+  // Get the mask
+  uint32_t mask() const;
+  // Get Origin
+  const ip_t& origin() const;
+
+  // Check if an ip is in the range
+  bool isIpInRange(const ip_t& ip) const;
+};
+
+// Output the ip range
+std::ostream & operator << (std::ostream &os, const iprange_t &range);
+
+} // namespace peco
+
 #endif
 
 // Push Chen

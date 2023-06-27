@@ -1,7 +1,7 @@
 /*
-    peco.h
+    loop.h
     libpeco
-    2020-01-08
+    2022-02-05
     Push Chen
 */
 
@@ -31,16 +31,66 @@ SOFTWARE.
 
 #pragma once
 
-#ifndef PECO_LIBPECO_PECO_H__
-#define PECO_LIBPECO_PECO_H__
+#ifndef PECO_LOOP_H__
+#define PECO_LOOP_H__
 
-// STD header
-#include "pecostd.h"
+#include "task/task.h"
 
-#include "basic.h"
-${PECO_PUBLIC_HEADER_INCLUDE_TASK}
-${PECO_PUBLIC_HEADER_INCLUDE_NET}
-${PECO_PUBLIC_HEADER_INCLUDE_NET_EXT}
+namespace peco {
+
+class loop : public std::enable_shared_from_this<loop> {
+public:
+  /**
+   * @brief Start a new normal task
+  */
+  task run(worker_t worker, const char* name = nullptr);
+  /**
+   * @brief Start a loop task
+  */
+  task run_loop(worker_t worker, duration_t interval, const char* name = nullptr);
+  /**
+   * @brief Start a task after given <delay>
+  */
+  task run_delay(worker_t worker, duration_t delay, const char* name = nullptr);
+
+public:
+  /**
+   * @brief Entrypoint of current loop, will block current thread
+  */
+  int main();
+
+  /**
+   * @brief Get current loop's load average
+  */
+  double load_average() const;
+
+public:
+  /**
+   * @brief Invoke in any task, which will case current loop to break and return from main
+  */
+  void exit(int code = 0);
+
+public:
+  /**
+   * @brief Get current thread's shared loop object
+  */
+  static std::shared_ptr<loop>& shared();
+
+public:
+  /**
+   * @brief D'stor
+  */
+  ~loop();
+
+protected:
+  /**
+   * @brief Not allow to create loop object
+  */
+  loop();
+};
+
+}
+
 #endif
 
 // Push Chen

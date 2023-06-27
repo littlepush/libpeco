@@ -1,7 +1,7 @@
 /*
-    test_sysinfo.cpp
+    bind.h
     libpeco
-    2022-02-13
+    2022-02-20
     Push Chen
 */
 
@@ -29,24 +29,64 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "basic.h"
-#include <thread>
+#pragma once
 
-int main(int argc, char *argv[]) {
-  peco::log::info << "Current Process Name: " << peco::process_name() << std::endl;
-  peco::log::info << "CPU Count: " << peco::cpu_count() << std::endl;
-  peco::log::info << "Total Memory: " << peco::total_memory() << "B" << std::endl;
-  peco::log::info << "Monitor For 10 Seconds: " << std::endl;
-  for (size_t i = 0; i < 10; ++i) {
-    peco::log::info << "-#" << (i + 1) << ": " << std::endl;
-    peco::log::info << " Memory Usage: " << peco::memory_usage() << "B" << std::endl;
-    peco::log::info << " Free Memory: " << peco::free_memory() << "B" << std::endl;
-    peco::log::info << " App CPU Usage: " << peco::cpu_usage() * 100 << "%" << std::endl;
-    auto _cpu_loads = peco::cpu_loads();
-    for (size_t c = 0; c < _cpu_loads.size(); ++c) {
-      peco::log::info << " Core #" << c << ": " << _cpu_loads[c] * 100 << "%" << std::endl;
-    }
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-  }
-  return 0;
-}
+#ifndef PECO_NET_BIND_H__
+#define PECO_NET_BIND_H__
+
+#include "pecostd.h"
+#include "net/utils.h"
+
+namespace peco {
+
+/**
+ * @brief Bind on a peer address
+*/
+class peer_bind {
+public:
+  peer_bind(const peer_t& addr);
+  peer_bind(const std::string& addr);
+  peer_bind(const peer_bind& other);
+  peer_bind(peer_bind&& other);
+  peer_bind& operator = (const peer_bind& other);
+  peer_bind& operator = (peer_bind&& other);
+
+  /**
+   * @brief Bind on the given socket
+  */
+  bool operator()(SOCKET_T fd);
+
+protected:
+  /**
+   * @brief Inner address storage
+  */
+  peer_t bind_addr_;
+};
+
+/**
+ * @brief Bind domain socket on a path
+*/
+class path_bind {
+public:
+  path_bind(const std::string& addr);
+  path_bind(const path_bind& other);
+  path_bind(path_bind&& other);
+  path_bind& operator = (const path_bind& other);
+  path_bind& operator = (path_bind&& other);
+
+  /**
+   * @brief Bind on the given socket
+  */
+  bool operator()(SOCKET_T fd);
+
+protected:
+  /**
+   * @brief Inner path storage
+  */
+  std::string bind_path_;
+};
+} // namespace peco
+
+#endif
+
+// Push Chen

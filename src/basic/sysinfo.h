@@ -1,7 +1,7 @@
 /*
-    test_sysinfo.cpp
+    sysinfo.h
     libpeco
-    2022-02-13
+    2019-06-04
     Push Chen
 */
 
@@ -29,24 +29,40 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "basic.h"
-#include <thread>
+#pragma once
 
-int main(int argc, char *argv[]) {
-  peco::log::info << "Current Process Name: " << peco::process_name() << std::endl;
-  peco::log::info << "CPU Count: " << peco::cpu_count() << std::endl;
-  peco::log::info << "Total Memory: " << peco::total_memory() << "B" << std::endl;
-  peco::log::info << "Monitor For 10 Seconds: " << std::endl;
-  for (size_t i = 0; i < 10; ++i) {
-    peco::log::info << "-#" << (i + 1) << ": " << std::endl;
-    peco::log::info << " Memory Usage: " << peco::memory_usage() << "B" << std::endl;
-    peco::log::info << " Free Memory: " << peco::free_memory() << "B" << std::endl;
-    peco::log::info << " App CPU Usage: " << peco::cpu_usage() * 100 << "%" << std::endl;
-    auto _cpu_loads = peco::cpu_loads();
-    for (size_t c = 0; c < _cpu_loads.size(); ++c) {
-      peco::log::info << " Core #" << c << ": " << _cpu_loads[c] * 100 << "%" << std::endl;
-    }
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-  }
-  return 0;
-}
+#ifndef PECO_SYS_INFO_H__
+#define PECO_SYS_INFO_H__
+
+#include "pecostd.h"
+#include <vector>
+
+namespace peco {
+
+// Get cpu count
+size_t cpu_count();
+
+// Get CPU Load
+std::vector< float > cpu_loads();
+
+// Get self's cpu usage
+float cpu_usage();
+
+// Total Memory
+uint64_t total_memory();
+
+// Free Memory
+uint64_t free_memory();
+
+// Memory Usage
+uint64_t memory_usage();
+
+// Get current process's name
+const std::string & process_name();
+
+} // namespace peco
+
+#endif
+
+// Push Chen
+//

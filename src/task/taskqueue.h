@@ -1,5 +1,5 @@
 /*
-    test_sysinfo.cpp
+    taskqueue.h
     libpeco
     2022-02-13
     Push Chen
@@ -29,24 +29,56 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "basic.h"
-#include <thread>
+#pragma once
 
-int main(int argc, char *argv[]) {
-  peco::log::info << "Current Process Name: " << peco::process_name() << std::endl;
-  peco::log::info << "CPU Count: " << peco::cpu_count() << std::endl;
-  peco::log::info << "Total Memory: " << peco::total_memory() << "B" << std::endl;
-  peco::log::info << "Monitor For 10 Seconds: " << std::endl;
-  for (size_t i = 0; i < 10; ++i) {
-    peco::log::info << "-#" << (i + 1) << ": " << std::endl;
-    peco::log::info << " Memory Usage: " << peco::memory_usage() << "B" << std::endl;
-    peco::log::info << " Free Memory: " << peco::free_memory() << "B" << std::endl;
-    peco::log::info << " App CPU Usage: " << peco::cpu_usage() * 100 << "%" << std::endl;
-    auto _cpu_loads = peco::cpu_loads();
-    for (size_t c = 0; c < _cpu_loads.size(); ++c) {
-      peco::log::info << " Core #" << c << ": " << _cpu_loads[c] * 100 << "%" << std::endl;
-    }
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-  }
-  return 0;
-}
+#ifndef PECO_TASKQUEUE_H__
+#define PECO_TASKQUEUE_H__
+
+#include "task/loop.h"
+#include "task/semaphore.h"
+
+#include <list>
+
+namespace peco {
+
+class taskqueue : public std::enable_shared_from_this<taskqueue> {
+protected:
+  taskqueue();
+public:
+
+  /**
+   * @brief Create a task queue
+  */
+  static std::shared_ptr<taskqueue> create();
+
+  /**
+   * @brief Remove all runing worker, and cancel current running jon
+  */
+  ~taskqueue();
+
+  /**
+   * @brief Add new task to the end of the queue
+  */
+  void append(worker_t worker);
+
+  /**
+   * @brief Insert new task to the header of the queue
+  */
+  void insert(worker_t worker);
+
+  /**
+   * @brief Sync the invocation, wait until the worker has been done
+  */
+  void sync(worker_t worker);
+
+protected:
+  task inner_t_;
+  semaphore sem_;
+  std::list<worker_t> pending_task_list_;
+};
+
+} // namespace peco
+
+#endif
+
+// Push Chen

@@ -1,7 +1,7 @@
 /*
-    test_sysinfo.cpp
+    stackcache.h
     libpeco
-    2022-02-13
+    2022-02-04
     Push Chen
 */
 
@@ -29,24 +29,47 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "basic.h"
-#include <thread>
+#pragma once
 
-int main(int argc, char *argv[]) {
-  peco::log::info << "Current Process Name: " << peco::process_name() << std::endl;
-  peco::log::info << "CPU Count: " << peco::cpu_count() << std::endl;
-  peco::log::info << "Total Memory: " << peco::total_memory() << "B" << std::endl;
-  peco::log::info << "Monitor For 10 Seconds: " << std::endl;
-  for (size_t i = 0; i < 10; ++i) {
-    peco::log::info << "-#" << (i + 1) << ": " << std::endl;
-    peco::log::info << " Memory Usage: " << peco::memory_usage() << "B" << std::endl;
-    peco::log::info << " Free Memory: " << peco::free_memory() << "B" << std::endl;
-    peco::log::info << " App CPU Usage: " << peco::cpu_usage() * 100 << "%" << std::endl;
-    auto _cpu_loads = peco::cpu_loads();
-    for (size_t c = 0; c < _cpu_loads.size(); ++c) {
-      peco::log::info << " Core #" << c << ": " << _cpu_loads[c] * 100 << "%" << std::endl;
-    }
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-  }
-  return 0;
-}
+#ifndef PECO_STACKCACHE_HXX
+#define PECO_STACKCACHE_HXX
+
+#include "pecostd.h"
+#include "basic/bufguard.h"
+#include "task/impl/taskcontext.hxx"
+
+namespace peco {
+
+class stack_cache {
+public:
+
+  typedef bufguard<TASK_STACK_SIZE>           task_buffer_t;
+  typedef std::shared_ptr<task_buffer_t>      task_buffer_ptr;
+
+public:
+  /**
+   * @brief Fetch a freed stack buffer
+  */
+  static task_buffer_ptr fetch();
+
+  /**
+   * @brief Release the stack buffer
+  */
+  static void release(task_buffer_ptr buffer);
+
+  /**
+   * @brief Set the max free buffer count;
+  */
+  static void set_cache_count(size_t cache_count);
+
+  /**
+   * @brief Get current cached buffer count
+  */
+  static size_t free_count();
+};
+
+} // namespace peco
+
+#endif
+
+// Push Chen

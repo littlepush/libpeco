@@ -1,7 +1,7 @@
 /*
-    test_sysinfo.cpp
+    dup.h
     libpeco
-    2022-02-13
+    2022-02-24
     Push Chen
 */
 
@@ -29,24 +29,52 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "basic.h"
-#include <thread>
+#pragma once
 
-int main(int argc, char *argv[]) {
-  peco::log::info << "Current Process Name: " << peco::process_name() << std::endl;
-  peco::log::info << "CPU Count: " << peco::cpu_count() << std::endl;
-  peco::log::info << "Total Memory: " << peco::total_memory() << "B" << std::endl;
-  peco::log::info << "Monitor For 10 Seconds: " << std::endl;
-  for (size_t i = 0; i < 10; ++i) {
-    peco::log::info << "-#" << (i + 1) << ": " << std::endl;
-    peco::log::info << " Memory Usage: " << peco::memory_usage() << "B" << std::endl;
-    peco::log::info << " Free Memory: " << peco::free_memory() << "B" << std::endl;
-    peco::log::info << " App CPU Usage: " << peco::cpu_usage() * 100 << "%" << std::endl;
-    auto _cpu_loads = peco::cpu_loads();
-    for (size_t c = 0; c < _cpu_loads.size(); ++c) {
-      peco::log::info << " Core #" << c << ": " << _cpu_loads[c] * 100 << "%" << std::endl;
+#ifndef PECO_NET_DUP_H__
+#define PECO_NET_DUP_H__
+
+#include "task.h"
+#include "utils.h"
+
+namespace peco {
+
+template <typename _TyIncomingAdapter, typename _TyOutgoingAdapter>
+void dup(std::shared_ptr<_TyIncomingAdapter> i, std::shared_ptr<_TyOutgoingAdapter> o) {
+  auto i2o = loop::shared()->run([=]() {
+    while(true) {
+      auto d = i->read();
+      if (d.status == kNetOpStatusFailed) {
+        break;
+      }
+      if (d.status == kNetOpStatusTimedout) {
+        continue;
+      }
+      o->write(d.data);
     }
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-  }
-  return 0;
+  });
+  auto o2i = loop::shared()->run([=](){
+    while(true) {
+      auto d = o->read();
+      if (d.status == kNetOpStatusFailed) {
+        break;
+      }
+      if (d.status == kNetOpStatusTimedout) {
+        continue;
+      }
+      i->write(d.data);
+    }
+  });
+  i2o.set_atexit([o2i]() {
+    task(o2i).cancel();
+  });
+  o2i.set_atexit([i2o]() {
+    task(i2o).cancel();
+  });
 }
+
+} // namespace peco
+
+#endif
+
+// Push Chen
