@@ -53,7 +53,7 @@ protected:
   static auto __deduce_make_tuple__(std::index_sequence<I...>) {
     using full_type = std::tuple<T...>;
     #if PECO_USE_GNU
-    return std::make_tuple((typename std::tuple_element<I, full_type>::type){}...);
+    return std::make_tuple((*(new (typename std::tuple_element<I, full_type>::type)))...);
     #else
     return std::make_tuple(std::tuple_element<I, full_type>::type()...);
     #endif
